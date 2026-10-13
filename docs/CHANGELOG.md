@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Free-first rule (D-7): Supabase kept, OpenStreetMap for maps
+- **Type:** docs / decision
+- **Areas:** docs
+- **What changed:** Added D-7 (Spark only, no billing). Amended D-4: alert images stay on Supabase unless Firebase Storage proves free. A1.8 now fixes the image widget + Supabase deps; A1.11 now swaps Google Maps for `flutter_map` + OpenStreetMap; A3.6 keeps the free straight-line ETA. I-31 deferred.
+- **Files:** docs/TODO.md, docs/ISSUES.md, docs/CHANGELOG.md
+- **Verified by:** Firebase pricing-plans page (updated 2026-10-06): using Google Maps APIs in the project auto-upgrades it to Blaze; Cloud Functions need Blaze; Spark quota overage shuts the product off for the month.
+- **Notes:** Storage-on-Spark still unconfirmed for this project (check console Build → Storage).
+
 ### 2026-10-13 — To-do split into Part A (before mid) and Part B (after mid)
 - **Type:** docs
 - **Areas:** docs

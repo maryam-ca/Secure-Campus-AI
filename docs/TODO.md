@@ -20,9 +20,10 @@ Rule for Part A: the existing eye-recognition and card code stays in the project
 | D-1 | Teacher dashboard not required |
 | D-2 | Students get bus status text only, 10 min before their pickup point (no student map) |
 | D-3 | Card recovery must extract name + registration number from the photo (OCR) |
-| D-4 | Use Firebase Storage, not Supabase (needs Blaze plan — confirm) |
+| D-4 | Use Firebase wherever free. **Amended 2026-10-13 (free-first rule, D-7):** alert images stay on Supabase (free, no card) unless the Firebase console shows Storage works on Spark; revisit in Part B |
 | D-5 | Eye-image consent is handled in the last phase |
 | D-6 | Part A = library + bus tracking + everything else; Part B = card recovery + eye recognition |
+| D-7 | **Free-first:** no billing account, no Blaze. Spark plan only; no Google Maps Platform key (maps use OpenStreetMap); no Cloud Functions |
 
 Open question for the supervisor: the committee result says "Partially Accepted with changes" and mentions *face* recognition; our proposal is *iris*. Get the required changes in writing **before** starting Part B (task A0.5).
 
@@ -50,13 +51,14 @@ Security
 - [ ] A1.6 (S) `deactivate_account` also disables the Firebase Auth user **I-11**
 - [ ] A1.7 (S) Rotate admin + seeded passwords; update `CREDENTIALS.md` **I-03**
 
-Storage (D-4)
-- [ ] A1.8 (M) Switch alert images to Firebase Storage: backend upload, `storage.rules` for `security_alerts/`, Flutter `SecureStorageImage` (this also fixes the broken widget); delete `supabase_client.py` + `SUPABASE_*`; keep `iris_ai` tests green **I-01, I-04, I-07, I-31**. Needs Blaze — confirm first.
+Storage (D-4, D-7)
+- [ ] A1.8 (S) **Keep Supabase** for alert images (free). Fix the broken Flutter widget to call the signed-URL endpoint `fetchSecurityAlertImageUrl` instead of Firebase Storage; add `supabase` to `iris_ai/requirements.txt`; add `SUPABASE_*` to `.env.example`; write `docs/SUPABASE_STORAGE_SETUP.md` **I-01, I-04, I-07, I-17**
+- [ ] A1.8b (S) Optional, Part B: check console Build → Storage; if free on Spark, switch back to Firebase Storage and drop Supabase **I-31**
 
 Flutter
 - [ ] A1.9 (S) Remove the unused import (`admin_dashboard_screen.dart:5`); `flutter analyze` → 0 warnings
 - [ ] A1.10 (M) Replace the counter `widget_test.dart` with real smoke tests (login renders, role redirect) **I-08**
-- [ ] A1.11 (S) Google Maps API key in `AndroidManifest.xml` (key not in git) **I-05**
+- [ ] A1.11 (M) Replace `google_maps_flutter` with `flutter_map` + OpenStreetMap tiles in the admin bus screen (no key, no billing); remove the Maps key requirement; respect OSM tile usage policy (set user-agent, no heavy prefetch) **I-05**
 - [ ] A1.12 (S) `POST_NOTIFICATIONS` permission + runtime request **I-06**
 
 ## A2 — Library module (proposal §4.2)
@@ -69,11 +71,11 @@ Flutter
 
 ## A3 — Bus tracking module (proposal §4.3, D-2)
 - [ ] A3.1 (M) Driver: start/stop trip, GPS to RTDB only while a trip is active (real phone, location permission)
-- [ ] A3.2 (M) Admin: bus, stops, driver account, assign students to stops; live map shows the marker (needs A1.11)
+- [ ] A3.2 (M) Admin: bus, stops, driver account, assign students to stops; live map shows the marker (OpenStreetMap, A1.11)
 - [ ] A3.3 (M) `bus_eta`: notification **once per trip, ~10 min before the bus reaches that student's pickup point**; test with a walk/drive and a short threshold **I-20**
 - [ ] A3.4 (M) Student portal: bus status **text only** (assigned bus/stop, trip running or not, ETA, "arriving in ~10 min"); no map, no live location **I-25**
 - [ ] A3.5 (S) Rules test: student cannot read `driverLocation` or others' assignments
-- [ ] A3.6 (S) ETA method: Google routing via `MAP_API_KEY`, or state "straight-line estimate at 25 km/h" in the report
+- [ ] A3.6 (S) ETA method: keep the free straight-line estimate at 25 km/h (leave `MAP_API_KEY` empty); state this in the report. Optional free upgrade: OSRM public routing API
 
 ## A4 — Shared portals, monitoring, notifications
 - [ ] A4.1 (M) Login + redirect for all five roles on a real phone; wrong-role access blocked; deactivated user blocked
