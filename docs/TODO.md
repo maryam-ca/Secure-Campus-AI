@@ -5,13 +5,13 @@ Do the phases **in sequence**; each one unblocks the next. Tick a box only when 
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) (state) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) (what the approved proposal still requires) · [ISSUES.md](ISSUES.md).
 
 Effort: S = under 1 hour · M = half a day · L = 1–2 days · XL = several days.
-Last updated: 2026-10-13. Progress: 0 / 59 done.
+Last updated: 2026-10-13. Progress: 2 / 59 done (0.3: jpeg is git-ignored but still in folder).
 
 ---
 
 ## Phase 0 — Protect the work (do first, ~half a day)
-- [ ] 0.1 (S) `git init` inside `securecampus/`; confirm `.gitignore` covers `.env`, `secrets/`, `CREDENTIALS.md`, all `.venv/`, `mobile/build/`, `.dart_tool/`, `scripts/.env`; first commit. **I-13**
-- [ ] 0.2 (S) Create a **private** GitHub/GitLab remote and push (check `git status` shows no secrets first).
+- [x] 0.1 (S) `git init` inside `securecampus/`; confirm `.gitignore` covers `.env`, `secrets/`, `CREDENTIALS.md`, all `.venv/`, `mobile/build/`, `.dart_tool/`, `scripts/.env`; first commit. **I-13**
+- [x] 0.2 (S) Create a **private** GitHub/GitLab remote and push (check `git status` shows no secrets first).
 - [ ] 0.3 (S) Move `studnet 1.jpeg` out of the repo. **I-14**
 - [ ] 0.4 (S) Make an encrypted/offline backup of `.env`, `secrets/serviceAccountKey.json`, `CREDENTIALS.md` (they are not in git).
 - [ ] 0.5 (S) Rotate the admin password and the seeded student passwords once the demo data is final. **I-03**
