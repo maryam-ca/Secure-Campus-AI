@@ -10,7 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from app import firebase_client, supabase_client
+from app import firebase_client
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -21,18 +21,6 @@ def require_admin(authorization: str | None) -> str:
     token = authorization.split(" ", 1)[1]
     try:
         return firebase_client.require_admin_uid(token)
-    except firebase_client.NotAuthorizedError as exc:
-        raise HTTPException(403, str(exc)) from exc
-    except firebase_client.FirebaseNotConfiguredError as exc:
-        raise HTTPException(503, str(exc)) from exc
-
-
-def require_admin_or_security(authorization: str | None) -> str:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(401, "Missing Authorization: Bearer <Firebase ID token> header")
-    token = authorization.split(" ", 1)[1]
-    try:
-        return firebase_client.require_role_uid(token, {"admin", "security"})
     except firebase_client.NotAuthorizedError as exc:
         raise HTTPException(403, str(exc)) from exc
     except firebase_client.FirebaseNotConfiguredError as exc:
@@ -94,22 +82,6 @@ def deactivate_account(body: DeactivateRequest, authorization: str | None = Head
     require_admin(authorization)
     firebase_client.deactivate_account(body.uid)
     return {"deactivated": True, "uid": body.uid}
-
-
-class SignedImageUrlResponse(BaseModel):
-    url: str
-
-
-@router.get("/security-alert-image-url", response_model=SignedImageUrlResponse)
-def get_security_alert_image_url(path: str, authorization: str | None = Header(default=None)):
-    require_admin_or_security(authorization)
-    try:
-        url = supabase_client.create_signed_url(path)
-    except supabase_client.SupabaseNotConfiguredError as exc:
-        raise HTTPException(503, str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(502, f"could not create signed URL: {exc}") from exc
-    return SignedImageUrlResponse(url=url)
 
 
 class UpdateAccountRequest(BaseModel):

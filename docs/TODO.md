@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 5 / 44 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 6 / 45 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -20,7 +20,7 @@ Rule for Part A: the existing eye-recognition and card code stays in the project
 | D-1 | Teacher dashboard not required |
 | D-2 | Students get bus status text only, 10 min before their pickup point (no student map) |
 | D-3 | Card recovery must extract name + registration number from the photo (OCR) |
-| D-4 | Use Firebase wherever free. **Amended 2026-10-13 (free-first rule, D-7):** alert images stay on Supabase (free, no card) unless the Firebase console shows Storage works on Spark; revisit in Part B |
+| D-4 | **Use Firebase for login and storage (confirmed 2026-10-13).** Auth already Firebase. Alert images → Firebase Storage; Supabase removed. Bucket must still be created in the console (A1.8b) |
 | D-5 | Eye-image consent is handled in the last phase |
 | D-6 | Part A = library + bus tracking + everything else; Part B = card recovery + eye recognition |
 | D-7 | **Free-first:** no billing account, no Blaze. Spark plan only; no Google Maps Platform key (maps use OpenStreetMap); no Cloud Functions |
@@ -52,8 +52,8 @@ Security
 - [ ] A1.7 (S) Rotate admin + seeded passwords; update `CREDENTIALS.md` **I-03**
 
 Storage (D-4, D-7)
-- [ ] A1.8 (S) **Keep Supabase** (done: `supabase==2.32.0` in requirements, `SUPABASE_*` in `.env.example`; still to do: Flutter widget + setup doc) for alert images (free). Fix the broken Flutter widget to call the signed-URL endpoint `fetchSecurityAlertImageUrl` instead of Firebase Storage; add `supabase` to `iris_ai/requirements.txt`; add `SUPABASE_*` to `.env.example`; write `docs/SUPABASE_STORAGE_SETUP.md` **I-01, I-04, I-07, I-17**
-- [ ] A1.8b (S) Optional, Part B: check console Build → Storage; if free on Spark, switch back to Firebase Storage and drop Supabase **I-31**
+- [x] A1.8 (S) **Firebase Storage for alert images (your decision 2026-10-13).** Code switched: backend uploads to `security_alerts/{camera}/{ts}.jpg`, Supabase removed everywhere, Flutter widget (already Firebase-based) now works as-is; alert is still created if the upload fails; 2 new tests. **I-01, I-04, I-07, I-31**
+- [ ] A1.8b (S) **You:** Firebase console → Build → Storage → **Get started** for project `campus-a4087` (bucket `campus-a4087.firebasestorage.app`), then deploy `storage.rules` (`firebase deploy --only storage`). Tell me the result; I re-run the bucket check. If the console demands Blaze, tell me — fallback is no photo (text-only alert) or Supabase again
 
 Flutter
 - [ ] A1.9 (S) Remove the unused import (`admin_dashboard_screen.dart:5`); `flutter analyze` → 0 warnings
