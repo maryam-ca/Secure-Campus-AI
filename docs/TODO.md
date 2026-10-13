@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 6 / 45 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 8 / 45 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -47,8 +47,8 @@ Environment
 - [ ] A1.4 (S) Decide canonical overdue job: `overdue_checker`; mark `functions/` deprecated **I-18**
 
 Security
-- [ ] A1.5 (M) Admin auth on `POST /iris/enroll` and `/recognize/once`; app sends the token **I-02**
-- [ ] A1.6 (S) `deactivate_account` also disables the Firebase Auth user **I-11**
+- [x] A1.5 (M) Admin auth on `POST /iris/enroll` and `/recognize/once`; app sends the token **I-02**
+- [x] A1.6 (S) `deactivate_account` also disables the Firebase Auth user **I-11**
 - [ ] A1.7 (S) Rotate admin + seeded passwords; update `CREDENTIALS.md` **I-03**
 
 Storage (D-4, D-7)

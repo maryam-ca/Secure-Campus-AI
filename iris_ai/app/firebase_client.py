@@ -365,7 +365,12 @@ def _reserve_registration_number(reg_no: str) -> None:
 
 
 def deactivate_account(uid: str) -> None:
+    """Marks the profile inactive (rules/router/backend all check this) AND
+    disables the Firebase Auth user and revokes its refresh tokens, so the
+    person can no longer sign in or keep using an existing session."""
     db().collection("users").document(uid).update({"active": False})
+    fb_auth.update_user(uid, disabled=True)
+    fb_auth.revoke_refresh_tokens(uid)
 
 
 def update_account(uid: str, role: str, name: str | None = None, password: str | None = None) -> dict[str, Any]:

@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Security fixes: admin auth on enroll/recognize, real account deactivation (A1.5, A1.6)
+- **Type:** fix (security)
+- **Areas:** iris_ai, mobile
+- **What changed:** `POST /iris/enroll` and `POST /recognize/once` now require an admin Firebase ID token (401 without, 403 for non-admin). The Flutter `enrollIris` call sends the Bearer token. `deactivate_account` now also disables the Firebase Auth user and revokes refresh tokens. Added `httpx` to requirements (test client).
+- **Files:** iris_ai/app/main.py, iris_ai/app/firebase_client.py, iris_ai/tests/test_endpoint_auth.py, iris_ai/requirements.txt, mobile/lib/services/backend_api_service.dart
+- **Issue:** I-02, I-11 (Fixed)
+- **Verified by:** `iris_ai` pytest 21/21 (12 new: 401/403 for all five admin endpoints, admin reaches handler, deactivation calls disable + revoke); `flutter analyze` 0 errors.
+- **Notes:** Not verified against real Firebase tokens or on a device (enrolling from the Admin screen should be re-tested). There is no "reactivate" feature in the app; re-enabling a user needs `disabled=False` in the console. `/stream/status`, `/camera/status`, `/health` stay public (read-only status).
+
 ### 2026-10-13 — Alert images moved to Firebase Storage; Supabase removed (A1.8)
 - **Type:** refactor / decision (D-4)
 - **Areas:** iris_ai, mobile, config, docs

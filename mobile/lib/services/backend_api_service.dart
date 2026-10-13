@@ -105,7 +105,9 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> enrollIris({required String studentId, required File imageFile}) async {
+    final token = await _idToken();
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/iris/enroll'))
+      ..headers['Authorization'] = 'Bearer $token'
       ..fields['student_id'] = studentId
       ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
 
