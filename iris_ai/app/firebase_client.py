@@ -15,17 +15,19 @@ be present; only calling into it does.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import secrets
 import time
 from typing import Any
 
 import firebase_admin
 from firebase_admin import auth as fb_auth
-from firebase_admin import credentials, db as rtdb, firestore, messaging
+from firebase_admin import credentials, db as rtdb, firestore, messaging, storage as fb_storage
 
 from app.config import settings
 from app.recognition.encoding import IrisTemplate
-from app import supabase_client
+
+log = logging.getLogger("securecampus.iris_ai.firebase")
 
 _app: firebase_admin.App | None = None
 
@@ -186,11 +188,13 @@ def record_gate_entry(student_id: str, registration_number: str, name: str,
 
 def create_unknown_alert(image_bytes: bytes, camera_id: str, camera_location: str,
                           best_score: float) -> tuple[bool, str]:
-    """Image storage: uploaded to Supabase Storage (app/supabase_client.py),
-    not Firebase Storage. Only an `imagePath` is stored in Firestore; the
-    Flutter client never talks to Supabase directly, it asks this backend
-    for a short-lived signed URL via the admin-or-security-gated
-    /admin/security-alert-image-url endpoint (admin_api.py)."""
+    """Image storage: uploaded to Firebase Storage under
+    security_alerts/{cameraId}/{timestamp}.jpg (private - storage.rules
+    allow reads only for signed-in Admin/Security). Only the path is stored
+    in Firestore; the Flutter client resolves a viewing URL with
+    getDownloadURL(), which storage.rules checks on every call. If the
+    upload fails (e.g. Storage not enabled for the project) the alert is
+    still created, just without a photo, so Security is never left blind."""
     cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=settings.UNKNOWN_ALERT_COOLDOWN_SECONDS)
     recent = (
         db().collection("securityAlerts")
@@ -203,8 +207,13 @@ def create_unknown_alert(image_bytes: bytes, camera_id: str, camera_location: st
         return False, "unknown-person alert suppressed by cooldown"
 
     ts = int(time.time())
-    blob_path = f"{camera_id}/{ts}.jpg"
-    supabase_client.upload_image(blob_path, image_bytes)
+    blob_path = f"security_alerts/{camera_id}/{ts}.jpg"
+    try:
+        init_firebase()
+        fb_storage.bucket().blob(blob_path).upload_from_string(image_bytes, content_type="image/jpeg")
+    except Exception as exc:  # noqa: BLE001 - never lose the alert because of the photo
+        log.warning("could not upload alert image to Firebase Storage: %s", exc)
+        blob_path = ""
 
     db().collection("securityAlerts").add({
         "type": "UNKNOWN_PERSON",

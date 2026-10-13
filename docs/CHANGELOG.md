@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Alert images moved to Firebase Storage; Supabase removed (A1.8)
+- **Type:** refactor / decision (D-4)
+- **Areas:** iris_ai, mobile, config, docs
+- **What changed:** `create_unknown_alert` uploads to Firebase Storage (`security_alerts/{camera}/{ts}.jpg`); if the upload fails the alert is still saved with an empty `imagePath`. Deleted `supabase_client.py`, the `/admin/security-alert-image-url` endpoint, `SUPABASE_*` settings, the `supabase` dependency and the unused Flutter `fetchSecurityAlertImageUrl`. Local `.env` now has the real project id and bucket `campus-a4087.firebasestorage.app` (git-ignored).
+- **Files:** iris_ai/app/firebase_client.py, admin_api.py, config.py, requirements.txt, tests/test_alert_upload.py, mobile/lib/services/backend_api_service.dart, .env.example, docs/*
+- **Issue:** I-01, I-04 (moot), I-07, I-31
+- **Verified by:** `iris_ai` pytest 9/9 (2 new, mocked Storage); `import app.main` OK; `flutter analyze` 0 errors (29 issues, all warnings/infos as before).
+- **Notes:** **Not verified against real Firebase:** the bucket `campus-a4087.firebasestorage.app` does not exist yet (checked read-only with the service account: 404). Create it via console → Storage → Get started (A1.8b); this may require the Blaze plan. Old alerts holding Supabase paths will show a placeholder. `README`/`ARCHITECTURE` still mention Supabase in places (I-17).
+
 ### 2026-10-13 — Environment fixes: venvs, supabase dependency, overdue_checker wired in (A1.1–A1.3)
 - **Type:** fix / config
 - **Areas:** iris_ai, bus_eta, overdue_checker, repo root

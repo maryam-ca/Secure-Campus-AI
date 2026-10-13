@@ -44,14 +44,6 @@ class Settings(BaseSettings):
     IRIS_MATCH_THRESHOLD: float = 0.32  # NOT experimentally validated - see docs/IRIS_MODEL.md
     IRIS_MODEL_PATH: str = ""  # reserved: path to a future deep-embedding model, unused by the classical pipeline
 
-    # Supabase Storage (unknown-person alert images only - moved off
-    # Firebase Storage since that now requires the Blaze billing plan
-    # even for free-tier usage; everything else stays on Firebase).
-    # See docs/SUPABASE_STORAGE_SETUP.md.
-    SUPABASE_URL: str = ""
-    SUPABASE_SERVICE_KEY: str = ""
-    SUPABASE_STORAGE_BUCKET: str = "security-alerts"
-
     # Event handling
     UNKNOWN_ALERT_COOLDOWN_SECONDS: int = 120   # per-camera cooldown between UNKNOWN alerts
     ATTENDANCE_DEDUPE_MINUTES: int = 30         # don't re-mark attendance for same student+course within this window

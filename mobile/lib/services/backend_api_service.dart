@@ -161,24 +161,6 @@ class BackendApiService {
     }
   }
 
-  // ---------------------------------------------------------------
-  // Unknown-person alert images (Supabase Storage-backed - see
-  // iris_ai/app/supabase_client.py). Flutter never talks to Supabase
-  // directly; it asks this admin-or-security-gated endpoint for a
-  // short-lived signed URL each time an image needs to be shown.
-  // ---------------------------------------------------------------
-
-  Future<String> fetchSecurityAlertImageUrl(String path) async {
-    final token = await _idToken();
-    final uri = Uri.parse('$baseUrl/admin/security-alert-image-url').replace(queryParameters: {'path': path});
-    final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 10));
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Could not load image (${resp.statusCode}).');
-    }
-    final body = jsonDecode(resp.body) as Map<String, dynamic>;
-    return body['url'] as String;
-  }
-
   String? _extractDetail(http.Response resp) {
     try {
       final body = jsonDecode(resp.body);
