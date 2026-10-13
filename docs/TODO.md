@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 8 / 45 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 11 / 45 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -44,7 +44,7 @@ Environment
 - [x] A1.1 (S) Recreate `.venv` for `iris_ai`, `bus_eta`, `overdue_checker` from requirements; re-run pytest on pinned versions **I-12, I-21**
 - [x] A1.2 (S) Add `overdue_checker` to `setup.*`, `run.*`, `docker-compose.yml` (+Dockerfile) **I-09**
 - [x] A1.3 (S) Update `.env.example` (add overdue interval; Supabase vars removed after A1.8) **I-17**
-- [ ] A1.4 (S) Decide canonical overdue job: `overdue_checker`; mark `functions/` deprecated **I-18**
+- [x] A1.4 (S) Decide canonical overdue job: `overdue_checker`; mark `functions/` deprecated **I-18**
 
 Security
 - [x] A1.5 (M) Admin auth on `POST /iris/enroll` and `/recognize/once`; app sends the token **I-02**
@@ -56,8 +56,8 @@ Storage (D-4, D-7)
 - [ ] A1.8b (S) **You:** Firebase console → Build → Storage → **Get started** for project `campus-a4087` (bucket `campus-a4087.firebasestorage.app`), then deploy `storage.rules` (`firebase deploy --only storage`). Tell me the result; I re-run the bucket check. If the console demands Blaze, tell me — fallback is no photo (text-only alert) or Supabase again
 
 Flutter
-- [ ] A1.9 (S) Remove the unused import (`admin_dashboard_screen.dart:5`); `flutter analyze` → 0 warnings
-- [ ] A1.10 (M) Replace the counter `widget_test.dart` with real smoke tests (login renders, role redirect) **I-08**
+- [x] A1.9 (S) Remove the unused import (`admin_dashboard_screen.dart:5`); `flutter analyze` → 0 warnings
+- [x] A1.10 (M) Replace the counter `widget_test.dart` with real smoke tests (login renders, role redirect) **I-08**
 - [ ] A1.11 (M) Replace `google_maps_flutter` with `flutter_map` + OpenStreetMap tiles in the admin bus screen (no key, no billing); remove the Maps key requirement; respect OSM tile usage policy (set user-agent, no heavy prefetch) **I-05**
 - [ ] A1.12 (S) `POST_NOTIFICATIONS` permission + runtime request **I-06**
 
