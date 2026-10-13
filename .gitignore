@@ -1,0 +1,42 @@
+# Secrets - never commit
+.env
+secrets/
+*.serviceAccountKey.json
+
+# Python
+iris_ai/.venv/
+bus_eta/.venv/
+functions/venv/
+functions/.venv/
+.qr_venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Firebase CLI local state
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Flutter (mobile/.gitignore also covers this, kept here for repo-wide safety)
+mobile/.dart_tool/
+mobile/build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+CREDENTIALS.md
+# Added 2026-10-13 (before first push)
+.venv/
+**/.venv/
+scripts/.env
+mobile/android/app/google-services.json
+mobile/android/local.properties
+mobile/.dart_tool/
+mobile/build/
+*.apk
+studnet*.jpeg
+.vscode/

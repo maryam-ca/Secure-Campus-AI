@@ -1,0 +1,34 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "roles": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "driverLocation": {
+      "$busId": {
+        ".read": "auth != null && (root.child('roles').child(auth.uid).val() === 'admin' || root.child('roles').child(auth.uid).val() === 'driver')",
+        ".write": "auth != null && root.child('roles').child(auth.uid).val() === 'driver' && root.child('driverAssignments').child(auth.uid).val() === $busId",
+        ".validate": "newData.hasChildren(['lat', 'lng', 'updatedAt', 'tripActive'])",
+        "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "tripActive": { ".validate": "newData.isBoolean()" },
+        "tripId": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "driverAssignments": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).val() === 'admin'",
+      "$uid": {
+        ".write": false
+      }
+    }
+  }
+}

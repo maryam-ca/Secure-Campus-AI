@@ -1,0 +1,25 @@
+version: "3.9"
+
+# Brings up the iris AI service locally. The Flutter app is NOT run
+# through Docker - it runs on a real device/emulator via `flutter run`
+# (see README), which Docker cannot provide.
+services:
+  iris_ai:
+    build:
+      context: ./iris_ai
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./secrets:/service/secrets:ro
+    restart: unless-stopped
+
+  bus_eta:
+    build:
+      context: ./bus_eta
+    env_file:
+      - .env
+    volumes:
+      - ./secrets:/service/secrets:ro
+    restart: unless-stopped

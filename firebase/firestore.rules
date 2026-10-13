@@ -1,0 +1,212 @@
+rules_version = '2';
+
+// SecureCampus Firestore rules.
+//
+// Role source of truth: users/{uid}.role, one of
+// "admin" | "student" | "security" | "librarian" | "driver", plus
+// users/{uid}.active (bool). The Admin portal is the only place that
+// creates/deactivates accounts; the iris_ai service and Admin SDK
+// scripfts write to sensitive collections with the Admin SDK, which
+// bypasses these rules entirely - these rules exist to stop a
+// compromised or malicious *client* from reading/writing data outside
+// its role, per project spec section 39 ("Never rely only on Flutter
+// UI to protect data").
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn()
+        && currentUser().role == role
+        && currentUser().active == true;
+    }
+
+    function isAdmin()     { return hasRole('admin'); }
+    function isStudent()   { return hasRole('student'); }
+    function isSecurity()  { return hasRole('security'); }
+    function isLibrarian() { return hasRole('librarian'); }
+    function isDriver()    { return hasRole('driver'); }
+
+    // ---------------------------------------------------------------
+    // users - each user reads their own account doc; only Admin can
+    // list/write any user (account creation, deactivation, role mgmt).
+    // Users write their own fcmToken (and only that field) so push
+    // notifications can actually be delivered - real bug fixed here:
+    // push_notification_service.dart's _saveToken() was always being
+    // rejected before this, so no FCM token was ever persisted for any
+    // user, meaning no push notification could ever actually be sent -
+    // only the in-app Alerts tab (a separate collection) worked.
+    // ---------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isAdmin() || request.auth.uid == uid;
+      allow update: if isAdmin()
+                    || (request.auth.uid == uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']));
+      allow create, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // registrationNumbers - uniqueness-reservation docs, doc ID = the
+    // registration number itself (fixed after audit - see
+    // docs/AUDIT_REPORT.md "Security Issues" #4). Written only by the
+    // Admin SDK inside a transaction (see iris_ai/app/firebase_client.py
+    // ::_reserve_registration_number) - no client of any role needs to
+    // touch this directly.
+    // ---------------------------------------------------------------
+    match /registrationNumbers/{regNo} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // students - a student may read (never write) their own record.
+    // Admin manages all fields. Security can read (needed to display a
+    // matched name/registration number on a verified gate entry).
+    // Librarian can read (real bug fixed here - findStudentByRegistrationNumber()
+    // in librarian_repository.dart queries this collection to look up who's
+    // borrowing a book; without this, every single library-desk search
+    // silently found nobody, no matter how correct the registration number
+    // typed in was, because the query itself was permission-denied).
+    // ---------------------------------------------------------------
+    match /students/{studentId} {
+      allow read: if isAdmin() || isSecurity() || isLibrarian() || (isStudent() && request.auth.uid == studentId);
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // courses - readable by any signed-in role that needs it
+    // (student for their own attendance %, admin for management).
+    // ---------------------------------------------------------------
+    match /courses/{courseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // enrollments (student <-> course) - a student may read only their
+    // own enrollment records.
+    match /enrollments/{enrollmentId} {
+      allow read: if isAdmin() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // irisProfiles - biometric data. No client, of any role including
+    // Admin, may read or write this directly; all access goes through
+    // the iris_ai service using the Admin SDK (server-side, bypasses
+    // these rules). This is intentional: "do not expose iris embeddings
+    // to students" is extended here to "do not expose them to any
+    // client app at all".
+    // ---------------------------------------------------------------
+    match /irisProfiles/{studentId} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // attendance - a student reads only their own rows. Writes happen
+    // from the iris_ai service (Admin SDK); Admin may also
+    // create/correct records from the Admin portal.
+    // ---------------------------------------------------------------
+    match /attendance/{recordId} {
+      allow read: if isAdmin() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // classSessions - a record that a real class actually happened for
+    // a course on a date (created by the iris_ai service via the Admin
+    // SDK the first time it records attendance that day). Readable by
+    // any signed-in user because students need the total-session count
+    // to compute their own attendance percentage (spec §17).
+    match /classSessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // gateEntries - Admin + Security ONLY. Students must never read
+    // this collection (project spec section 22, final/non-negotiable).
+    // ---------------------------------------------------------------
+    match /gateEntries/{entryId} {
+      allow read: if isAdmin() || isSecurity();
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // securityAlerts (unknown-person events) - Admin + Security. Security
+    // may update alert status (read/resolved) but not fabricate new ones
+    // from the client; those come from the iris_ai service.
+    // ---------------------------------------------------------------
+    match /securityAlerts/{alertId} {
+      allow read: if isAdmin() || isSecurity();
+      allow update: if (isAdmin() || isSecurity())
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow create, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // lostCardReports - anyone signed in (including an anonymous-auth
+    // "finder" session) may submit a report. Only Admin can read/manage
+    // the queue and update status.
+    // ---------------------------------------------------------------
+    match /lostCardReports/{reportId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // library
+    // ---------------------------------------------------------------
+    match /books/{bookId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isLibrarian();
+    }
+
+    match /libraryIssues/{issueId} {
+      allow read: if isAdmin() || isLibrarian() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin() || isLibrarian();
+    }
+
+    // ---------------------------------------------------------------
+    // bus / busStops / busAssignments - a student may read their own
+    // assignment and general stop/bus metadata, never another
+    // student's assignment. Live GPS itself lives in Realtime Database,
+    // not here (see database.rules.json) and is NOT student-readable.
+    // ---------------------------------------------------------------
+    match /bus/{busId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /busStops/{stopId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /busAssignments/{assignmentId} {
+      allow read: if isAdmin() || isDriver() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // notifications - a user reads only notifications addressed to
+    // them. Writes come from the Admin SDK (server-side services).
+    // Marking a notification as read is the one client-side write
+    // allowed, and only to the isRead field of one's own notification.
+    // ---------------------------------------------------------------
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || resource.data.recipient == request.auth.uid;
+      allow update: if resource.data.recipient == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      // A user may delete their own notification (real feature added here:
+      // "clear"/dismiss a notification, and "Clear all") - previously only
+      // Admin could delete at all, so this action had no path to work.
+      allow delete: if isAdmin() || resource.data.recipient == request.auth.uid;
+      allow create: if isAdmin();
+    }
+  }
+}

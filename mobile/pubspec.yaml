@@ -1,0 +1,70 @@
+name: securecampus
+description: SecureCampus — Smart Campus Security & Management System
+publish_to: "none"
+version: 0.1.0
+
+# Verified against Flutter 3.47.1 / Dart 3.13.1 (current stable as of
+# Sept 2026 - confirmed via web search against docs.flutter.dev release
+# notes, since no Flutter SDK is available in the build environment used
+# to write this code; see docs/VERSION_AUDIT.md for exactly what was and
+# wasn't verified). The floor below is intentionally not pinned to that
+# exact patch - run `flutter --version` yourself and adjust only if it
+# reports something OLDER than this floor.
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing (role-based redirects)
+  go_router: ^14.8.1
+
+  # Firebase - floors below are the real, dated versions from Firebase's
+  # official Flutter BoM 4.11.0 (2026-03-23), the most recent release
+  # this environment could confirm via web search (firebase.google.com/
+  # support/release-notes/flutter). Caret constraints mean `flutter pub
+  # get` will resolve to whatever is actually newest-compatible at the
+  # time you run it (very likely newer than 4.11.0 by now) - these
+  # floors are a verified minimum, not a ceiling.
+  firebase_core: ^4.6.0
+  firebase_auth: ^6.3.0
+  cloud_firestore: ^6.2.0
+  firebase_database: ^12.2.0
+  firebase_storage: ^13.2.0
+  firebase_messaging: ^16.1.2
+
+  # Driver GPS (real device location only — see driver feature)
+  geolocator: ^13.0.2
+
+  # Librarian QR scanning
+  mobile_scanner: ^5.2.3
+
+  # Admin live bus map (spec §17/§34) - see docs/MOBILE_PLATFORM_SETUP.md
+  # for the required native Maps API key configuration.
+  google_maps_flutter: ^2.9.0
+
+  # Formatting
+  intl: ^0.19.0
+
+  # Calling the iris_ai / admin backend service (account creation, iris
+  # enrollment, camera controls)
+  http: ^1.2.2
+
+  # Admin: capturing an iris-enrollment photo from the device camera/gallery
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/campus_building.jpg
