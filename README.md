@@ -14,6 +14,19 @@ demo — this project follows a strict no-fake-data policy (no mock AI,
 no fake GPS, no hardcoded stats), which means some things genuinely
 cannot be proven working until you attach that hardware.
 
+## Setup after cloning (secrets are not in git)
+
+These files are git-ignored and must be created locally. Ask the project owner or create your own:
+
+| File | How to get it |
+|---|---|
+| `.env` | Copy `.env.example`, fill in Firebase, camera, Supabase values |
+| `secrets/serviceAccountKey.json` | Firebase console → Project settings → Service accounts → Generate new private key |
+| `mobile/android/app/google-services.json` | Firebase console → Project settings → your Android app → download |
+| `CREDENTIALS.md` | Not needed; only a private note of seeded account passwords |
+
+Then follow section 4 below. Never commit these files.
+
 ## 1. Version requirements (current stable, verified Sept 2026)
 
 See `docs/VERSION_AUDIT.md` for the full methodology and sourcing —
