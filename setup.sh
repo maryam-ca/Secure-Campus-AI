@@ -38,6 +38,15 @@ pip install -r requirements.txt
 deactivate
 cd ..
 
+echo "-- overdue_checker: creating Python virtual environment --"
+cd overdue_checker
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip >/dev/null
+pip install -r requirements.txt
+deactivate
+cd ..
+
 echo "-- functions: creating Python virtual environment (for local import checks only - deploy via firebase CLI) --"
 cd functions
 python3 -m venv venv

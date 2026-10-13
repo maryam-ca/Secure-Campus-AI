@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Environment fixes: venvs, supabase dependency, overdue_checker wired in (A1.1–A1.3)
+- **Type:** fix / config
+- **Areas:** iris_ai, bus_eta, overdue_checker, repo root
+- **What changed:** Deleted the unusable `.venv` folders and recreated them for `iris_ai`, `bus_eta`, `overdue_checker` from pinned requirements (Python 3.11.9). Added `supabase==2.32.0` to `iris_ai/requirements.txt`. Added `overdue_checker` to `setup.bat/.sh`, `run.bat/.sh`, `docker-compose.yml`, plus a new `overdue_checker/Dockerfile`. Added `SUPABASE_*` and `OVERDUE_CHECK_INTERVAL_SECONDS` to `.env.example`.
+- **Files:** iris_ai/requirements.txt, setup.bat, setup.sh, run.bat, run.sh, docker-compose.yml, overdue_checker/Dockerfile, .env.example
+- **Issue:** I-04, I-09, I-12, I-21 (Fixed); I-17 (in progress)
+- **Verified by:** on the pinned set (numpy 2.2.6, OpenCV 5.0.0): `iris_ai` pytest 7/7, `bus_eta` pytest 5/5; `import app.firebase_client, app.main` OK in iris_ai; `import app.service` OK in overdue_checker.
+- **Notes:** Not tested: `docker compose build`, `setup.sh`/`run.sh` (no Docker/bash target here), running `run.bat` against live Firebase. The pinned versions need Python 3.11+ (Docker images use 3.12).
+
 ### 2026-10-13 — Free-first rule (D-7): Supabase kept, OpenStreetMap for maps
 - **Type:** docs / decision
 - **Areas:** docs

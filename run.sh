@@ -13,7 +13,10 @@ fi
 echo "== Starting bus_eta job in the background (logs: bus_eta.log) =="
 ( cd bus_eta && source .venv/bin/activate && set -a && source ../.env && set +a && python -m app.main ) > bus_eta.log 2>&1 &
 BUS_ETA_PID=$!
-trap "kill $BUS_ETA_PID 2>/dev/null" EXIT
+echo "== Starting overdue_checker in the background (logs: overdue_checker.log) =="
+( cd overdue_checker && source .venv/bin/activate && set -a && source ../.env && set +a && python -m app.main ) > overdue_checker.log 2>&1 &
+OVERDUE_PID=$!
+trap "kill $BUS_ETA_PID $OVERDUE_PID 2>/dev/null" EXIT
 
 echo "== Starting iris_ai service on http://localhost:${API_PORT:-8000} =="
 cd iris_ai
