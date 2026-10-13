@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/confirm_dialog.dart';
@@ -66,23 +67,39 @@ class AdminBusScreen extends ConsumerWidget {
                     height: 260,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(target: LatLng(lat, lng), zoom: 13),
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('bus'),
-                            position: LatLng(lat, lng),
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                            infoWindow: InfoWindow(title: _busId, snippet: tripActive ? 'Trip active' : 'Idle'),
+                      // OpenStreetMap tiles: free, no API key, no billing account.
+                      child: FlutterMap(
+                        options: MapOptions(initialCenter: LatLng(lat, lng), initialZoom: 13),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.example.securecampus',
                           ),
-                          for (final s in stops)
-                            Marker(
-                              markerId: MarkerId('stop_${s.id}'),
-                              position: LatLng(s.lat, s.lng),
-                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                              infoWindow: InfoWindow(title: s.name),
-                            ),
-                        },
+                          MarkerLayer(
+                            markers: [
+                              for (final s in stops)
+                                Marker(
+                                  point: LatLng(s.lat, s.lng),
+                                  width: 36,
+                                  height: 36,
+                                  child: Tooltip(
+                                    message: s.name,
+                                    child: const Icon(Icons.location_on, color: AppColors.success, size: 32),
+                                  ),
+                                ),
+                              Marker(
+                                point: LatLng(lat, lng),
+                                width: 44,
+                                height: 44,
+                                child: Tooltip(
+                                  message: tripActive ? '$_busId - trip active' : '$_busId - idle',
+                                  child: const Icon(Icons.directions_bus_filled, color: AppColors.primaryBlue, size: 36),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+                        ],
                       ),
                     ),
                   ),
