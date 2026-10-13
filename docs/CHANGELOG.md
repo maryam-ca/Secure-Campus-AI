@@ -28,6 +28,20 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Library: "due soon" notice and "report unauthorized issue" (A2.2–A2.4)
+- **Type:** feature
+- **Areas:** overdue_checker, mobile, firebase rules
+- **What changed:**
+  - `overdue_checker` now sends a one-time **due-soon** notice (return date within `DUE_SOON_HOURS`, default 48) as well as the overdue notice, and notifies every active librarian + security user once per new student report. Code refactored into `notify_due_soon`, `notify_overdue`, `notify_new_reports`.
+  - Student Library tab: **"I did not borrow this"** button on each issued book → dialog with optional note → `issueReports` document.
+  - Librarian portal: new **Reports** tab. Security portal: new **Book Reports** tab. Both list reports in real time and can mark them resolved/reopen.
+  - `firestore.rules`: new `issueReports` rules (student can create only for their own loan, fixed field set, note ≤ 200 chars; staff read; staff update `status` only; admin delete). `LibraryIssueModel` now carries the document id.
+- **Files:** overdue_checker/app/{service,config}.py, overdue_checker/tests/test_service.py, mobile/lib/{models/issue_report_model.dart, repositories/issue_report_repository.dart, providers/issue_report_providers.dart, features/common/issue_reports_screen.dart, features/student/widgets/library_section.dart, features/librarian/librarian_home_screen.dart, features/security/security_dashboard_screen.dart, models/dashboard_models.dart}, mobile/test/issue_report_model_test.dart, firebase/firestore.rules, .env.example
+- **Issue:** I-23, I-24 (Fixed in code)
+- **Verified by:** `overdue_checker` pytest 10/10 (due-soon once + dedupe, overdue once, no-student skip, push failure, report fan-out + dedupe); `flutter test` 10/10; `flutter analyze` 0 errors/0 warnings; `iris_ai` 21/21 and `bus_eta` 5/5 still pass.
+- **Not verified:** nothing ran on a phone (APK build blocked by I-32); the new Firestore rules were not run in the emulator and are **not deployed** (`firebase deploy --only firestore:rules` needed); the notifications for staff arrive up to 60 s late (checker interval) and Librarian/Security have no in-app notification list, only push + the reports tab.
+- **Notes:** `DUE_SOON_HOURS` added to `.env.example`. A librarian/security user without an FCM token only sees the report in the tab.
+
 ### 2026-10-13 — Admin map on OpenStreetMap; notification permission (A1.11, A1.12) — APK build blocked (I-32)
 - **Type:** feature / config
 - **Areas:** mobile

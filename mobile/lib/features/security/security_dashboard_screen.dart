@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/portal_scaffold.dart';
 import '../../core/widgets/secure_storage_image.dart';
 import '../../models/admin_models.dart';
+import '../common/issue_reports_screen.dart';
 import '../../providers/admin_providers.dart';
 
 class SecurityDashboardScreen extends StatelessWidget {
@@ -15,7 +16,7 @@ class SecurityDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: PortalScaffold(
         title: 'Security',
         role: UserRole.security,
@@ -27,10 +28,10 @@ class SecurityDashboardScreen extends StatelessWidget {
                 labelColor: AppColors.primaryBlue,
                 unselectedLabelColor: AppColors.bodyText,
                 indicatorColor: AppColors.primaryBlue,
-                tabs: [Tab(text: 'Recent Entries'), Tab(text: 'Unknown-Person Alerts')],
+                tabs: [Tab(text: 'Recent Entries'), Tab(text: 'Unknown-Person Alerts'), Tab(text: 'Book Reports')],
               ),
             ),
-            const Expanded(child: TabBarView(children: [_RecentEntries(), _Alerts()])),
+            const Expanded(child: TabBarView(children: [_RecentEntries(), _Alerts(), IssueReportsScreen()])),
           ],
         ),
       ),

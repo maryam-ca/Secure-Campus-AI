@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/roles.dart';
 import '../../core/widgets/portal_scaffold.dart';
+import '../common/issue_reports_screen.dart';
 import 'librarian_catalog_screen.dart';
 import 'librarian_issued_books_screen.dart';
 import 'librarian_scan_screen.dart';
@@ -20,6 +21,7 @@ class _LibrarianHomeScreenState extends State<LibrarianHomeScreen> {
     LibrarianScanScreen(),
     LibrarianIssuedBooksScreen(),
     LibrarianCatalogScreen(),
+    IssueReportsScreen(),
   ];
 
   @override
@@ -35,6 +37,7 @@ class _LibrarianHomeScreenState extends State<LibrarianHomeScreen> {
           NavigationDestination(icon: Icon(Icons.qr_code_scanner_outlined), label: 'Scan & Issue'),
           NavigationDestination(icon: Icon(Icons.assignment_outlined), label: 'Issued'),
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Catalog'),
+          NavigationDestination(icon: Icon(Icons.report_gmailerrorred_outlined), label: 'Reports'),
         ],
       ),
     );
