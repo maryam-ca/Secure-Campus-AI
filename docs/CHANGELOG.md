@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Admin map on OpenStreetMap; notification permission (A1.11, A1.12) — APK build blocked (I-32)
+- **Type:** feature / config
+- **Areas:** mobile
+- **What changed:** Replaced `google_maps_flutter` with `flutter_map` 8.3.2 + `latlong2` (OSM tiles, attribution shown, no API key/billing). Bus and stop markers kept. Added `POST_NOTIFICATIONS` to the Android manifest. `pubspec.lock` regenerated.
+- **Files:** mobile/pubspec.yaml, mobile/pubspec.lock, mobile/lib/features/admin/admin_bus_screen.dart, mobile/android/app/src/main/AndroidManifest.xml
+- **Issue:** I-05, I-06 (Fixed in code); I-32 (new, open)
+- **Verified by:** `flutter analyze` 0 errors / 0 warnings; `flutter test` 8/8. **`flutter build apk --debug` FAILS** (Gradle script compile errors) — I stashed my changes and rebuilt the original commit: it fails identically, so this is not caused by the map change. Cause found: project made with Flutter 3.47.2, installed SDK is 3.38.7 (`C:lutter`).
+- **Notes:** The map has not been seen running (no APK, no device). OSM public tiles are for light use only. Fix for I-32 needs switching the global Flutter SDK, which may affect your other projects, so it is left to you (task A1.13).
+
 ### 2026-10-13 — Flutter tests, unused import, functions/ deprecated (A1.4, A1.9, A1.10)
 - **Type:** test / config
 - **Areas:** mobile, functions, firebase.json
