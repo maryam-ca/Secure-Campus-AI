@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Supervisor decisions recorded; Flutter health check
+- **Type:** docs / test
+- **Areas:** docs, mobile
+- **What changed:** Recorded D-1…D-5 in TODO.md; opened I-31 (switch to Firebase Storage); I-19 closed; I-25/I-28 updated. Committee email "Partially Accepted with changes" noted.
+- **Files:** docs/TODO.md, docs/ISSUES.md, docs/CHANGELOG.md
+- **Verified by:** `flutter pub get` OK; `flutter analyze`: 0 errors, 1 warning, 28 infos; `flutter test`: **fails** (default counter test, I-08). `pub get` rewrote `pubspec.lock` (older versions); reverted with git checkout so the tracked lockfile is unchanged. `iris_ai` 7/7 and `bus_eta` 5/5 passed earlier today.
+- **Notes:** Existing code compiles; nothing found broken beyond the already-listed issues.
+
 ### 2026-10-13 — Project put under git and force-pushed to GitHub
 - **Type:** infra
 - **Areas:** repo root, docs
