@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Flutter tests, unused import, functions/ deprecated (A1.4, A1.9, A1.10)
+- **Type:** test / config
+- **Areas:** mobile, functions, firebase.json
+- **What changed:** Deleted the counter-template `widget_test.dart`. Added `test/models_test.dart` (roles = exactly five, no Teacher; library status issued/overdue/returned; bus assignment parsing) and `test/login_screen_test.dart` (screen renders; empty submit never reaches Firebase). Removed the unused import in `admin_dashboard_screen.dart`. Removed the `functions` block from `firebase.json` and added `functions/DEPRECATED.md` (Cloud Functions need Blaze).
+- **Files:** mobile/test/*, mobile/lib/features/admin/admin_dashboard_screen.dart, firebase.json, functions/DEPRECATED.md
+- **Issue:** I-08, I-18 (Fixed)
+- **Verified by:** `flutter test` 8/8 pass; `flutter analyze` 0 errors, 0 warnings (style infos only).
+- **Notes:** Router redirect-by-role is private and needs Firebase; it is not covered yet (A5.2, will need fakes). `firebase deploy` no longer touches functions.
+
 ### 2026-10-13 — Security fixes: admin auth on enroll/recognize, real account deactivation (A1.5, A1.6)
 - **Type:** fix (security)
 - **Areas:** iris_ai, mobile
