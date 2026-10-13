@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — To-do split into Part A (before mid) and Part B (after mid)
+- **Type:** docs
+- **Areas:** docs
+- **What changed:** Rewrote TODO.md. Part A (before mid): library, bus tracking, admin/roles, notifications, tests, docs, mid regression check. Part B (after mid): lost-card recovery with OCR, iris/eye recognition, final report. Added decision D-6.
+- **Files:** docs/TODO.md, docs/CHANGELOG.md
+- **Verified by:** task counts recomputed from the file.
+- **Notes:** Eye-recognition and card code stays in the repo during Part A; A5.3 is the check that nothing broke.
+
 ### 2026-10-13 — Supervisor decisions recorded; Flutter health check
 - **Type:** docs / test
 - **Areas:** docs, mobile
