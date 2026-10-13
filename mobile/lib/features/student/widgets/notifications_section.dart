@@ -15,6 +15,7 @@ IconData iconForNotificationType(String type) {
       return Icons.badge_outlined;
     case 'LIBRARY_OVERDUE':
       return Icons.menu_book_outlined;
+    case 'BUS_20_MIN':
     case 'BUS_10_MIN':
       return Icons.directions_bus_filled_outlined;
     default:

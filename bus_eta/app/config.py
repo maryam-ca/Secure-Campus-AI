@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     BUS_ID: str = "BUS-001"
     POLL_INTERVAL_SECONDS: float = 20.0
+    # Two reminders per trip: "get ready" at ALERT_FIRST_MINUTES, then the
+    # final "head to your stop" at ALERT_THRESHOLD_MINUTES.
+    ALERT_FIRST_MINUTES: float = 20.0
     ALERT_THRESHOLD_MINUTES: float = 10.0
     # Used only as a fallback ETA estimate when MAP_API_KEY is not set -
     # a real routing API call (below) is preferred when available.

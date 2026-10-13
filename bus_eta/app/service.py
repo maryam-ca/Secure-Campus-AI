@@ -1,8 +1,17 @@
 """
 One polling cycle of the bus ETA job: read the driver's live location,
 and for every student assigned to this bus with a registered stop,
-compute ETA and fire the "~10 minutes away" notification exactly once
-per trip (spec §35 - never spammed, never sent to the wrong student).
+compute ETA and send up to TWO in-app reminders per trip:
+
+  1. "Get ready"  - when the bus is about ALERT_FIRST_MINUTES (20) away.
+  2. "Head to your stop" - when it is about ALERT_THRESHOLD_MINUTES (10) away.
+
+Each stage is sent at most once per student per trip (dedupe fields
+`alertFirstTripId` / `alertFinalTripId` on the busAssignments doc; the
+legacy `lastAlertTripId` is still honoured as "final already sent").
+If the first reading for a student is already inside the 10-minute window
+(e.g. the driver started the trip late), only the final alert is sent -
+a "get ready" notice that late would be noise.
 """
 
 from __future__ import annotations
@@ -14,6 +23,22 @@ from app.config import settings
 from app.geo import estimate_eta_minutes
 
 log = logging.getLogger("bus_eta")
+
+FIRST = "first"
+FINAL = "final"
+
+
+def decide_alert(eta_minutes: float, first_sent: bool, final_sent: bool,
+                 first_threshold: float, final_threshold: float) -> str | None:
+    """Which alert (if any) to send now. Pure function so it can be unit
+    tested without Firebase."""
+    if final_sent:
+        return None
+    if eta_minutes <= final_threshold:
+        return FINAL
+    if eta_minutes <= first_threshold and not first_sent:
+        return FIRST
+    return None
 
 
 def run_once() -> int:
@@ -37,8 +62,11 @@ def run_once() -> int:
         if not student_id:
             continue
 
-        if assignment.get("lastAlertTripId") == location.trip_id:
-            continue  # already alerted this student for this trip
+        trip = location.trip_id
+        final_sent = trip in (assignment.get("alertFinalTripId"), assignment.get("lastAlertTripId"))
+        first_sent = assignment.get("alertFirstTripId") == trip
+        if final_sent:
+            continue
 
         eta_minutes, method = estimate_eta_minutes(
             origin=(location.lat, location.lng),
@@ -47,11 +75,15 @@ def run_once() -> int:
             api_key=settings.MAP_API_KEY,
         )
 
-        if eta_minutes <= settings.ALERT_THRESHOLD_MINUTES:
-            firebase_client.notify_student_bus_arriving(student_id, assignment["stopName"], eta_minutes)
-            firebase_client.mark_alert_sent(assignment["id"], location.trip_id)
-            sent += 1
-            log.info("bus %s: notified student %s (%.1f min via %s) for stop %s",
-                      settings.BUS_ID, student_id, eta_minutes, method, assignment["stopName"])
+        stage = decide_alert(eta_minutes, first_sent, final_sent,
+                             settings.ALERT_FIRST_MINUTES, settings.ALERT_THRESHOLD_MINUTES)
+        if stage is None:
+            continue
+
+        firebase_client.notify_student_bus(student_id, assignment["stopName"], eta_minutes, stage)
+        firebase_client.mark_alert_sent(assignment["id"], trip, stage)
+        sent += 1
+        log.info("bus %s: %s alert to student %s (%.1f min via %s) for stop %s",
+                 settings.BUS_ID, stage, student_id, eta_minutes, method, assignment["stopName"])
 
     return sent
