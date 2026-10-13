@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 16 / 46 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 17 / 46 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -61,7 +61,7 @@ Flutter
 - [x] A1.11 (M) Replace `google_maps_flutter` with `flutter_map` + OpenStreetMap tiles in the admin bus screen (no key, no billing); remove the Maps key requirement; respect OSM tile usage policy (set user-agent, no heavy prefetch) **I-05**
 - [x] A1.12 (S) `POST_NOTIFICATIONS` permission + runtime request **I-06**
 
-- [ ] A1.13 (S) **You decide:** Flutter SDK mismatch blocks `flutter build apk` (project made with 3.47.2, `C:lutter` is 3.38.7). Switch `C:lutter` to 3.47.x (`cd C:lutter; git checkout 3.47.7; flutter doctor`), then `flutter build apk --debug` must succeed **I-32**
+- [x] A1.13 (S) **You decide:** Flutter SDK mismatch blocks `flutter build apk` (project made with 3.47.2, `C:lutter` is 3.38.7). Switch `C:lutter` to 3.47.x (`cd C:lutter; git checkout 3.47.7; flutter doctor`), then `flutter build apk --debug` must succeed **I-32**
 
 ## A2 — Library module (proposal §4.2)
 - [ ] A2.1 (M) Verify the full flow on a phone with real printed QR codes: scan → student reg-no → issue (auto issue date, manual return date) → student portal shows it → return
