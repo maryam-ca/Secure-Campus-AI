@@ -21,6 +21,8 @@ class BusAssignmentModel {
 enum LibraryIssueStatus { issued, overdue, returned }
 
 class LibraryIssueModel {
+  /// libraryIssues document id ('' when built outside Firestore, e.g. in tests).
+  final String id;
   final String bookId;
   final String bookTitle;
   final DateTime issueDate;
@@ -28,6 +30,7 @@ class LibraryIssueModel {
   final bool returned;
 
   const LibraryIssueModel({
+    this.id = '',
     required this.bookId,
     required this.bookTitle,
     required this.issueDate,
@@ -45,6 +48,7 @@ class LibraryIssueModel {
   factory LibraryIssueModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     return LibraryIssueModel(
+      id: doc.id,
       bookId: data['bookId'] as String? ?? '',
       bookTitle: data['bookTitle'] as String? ?? 'Unknown title',
       issueDate: (data['issueDate'] as Timestamp?)?.toDate() ?? DateTime.now(),

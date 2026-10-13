@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 13 / 46 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 16 / 46 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -65,9 +65,9 @@ Flutter
 
 ## A2 — Library module (proposal §4.2)
 - [ ] A2.1 (M) Verify the full flow on a phone with real printed QR codes: scan → student reg-no → issue (auto issue date, manual return date) → student portal shows it → return
-- [ ] A2.2 (M) **"Return date near" notification:** extend `overdue_checker` (once per issue, `dueSoonNotifiedAt`) **I-24**
-- [ ] A2.3 (S) Overdue notification still works (once per issue) — test with a short due date
-- [ ] A2.4 (L) **"Report unauthorized issue":** student button on an issued book → report doc → notifications to librarian + security; screens to view/resolve; Firestore rules **I-23**
+- [x] A2.2 (M) **"Return date near" notification:** `overdue_checker` sends it once per issue (`dueSoonNotifiedAt`, window `DUE_SOON_HOURS`=48) — code + unit tests done; **still to do: real-device check** **I-24**
+- [x] A2.3 (S) Overdue notification still works (once per issue) — test with a short due date
+- [x] A2.4 (L) **(code done, not run on a device; rules not emulator-tested)** **"Report unauthorized issue":** student button on an issued book → report doc → notifications to librarian + security; screens to view/resolve; Firestore rules **I-23**
 - [ ] A2.5 (M) Librarian catalog management (add/edit book, availability); search/filter works
 - [ ] A2.6 (S) Rules test: student sees only own `libraryIssues`; librarian can read `students` (reg-no lookup)
 

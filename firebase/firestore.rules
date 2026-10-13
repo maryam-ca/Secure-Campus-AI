@@ -166,6 +166,28 @@ service cloud.firestore {
       allow write: if isAdmin() || isLibrarian();
     }
 
+    // ---------------------------------------------------------------
+    // issueReports - a student reports a book they say they never
+    // borrowed (proposal 4.2). The student may create one only for a loan
+    // that really belongs to them; Librarian/Security/Admin read all and
+    // may change only `status`. The overdue_checker service (Admin SDK)
+    // sends the notifications.
+    // ---------------------------------------------------------------
+    match /issueReports/{reportId} {
+      allow create: if isStudent()
+                    && request.resource.data.keys().hasOnly(['issueId', 'bookId', 'bookTitle', 'studentId',
+                         'studentName', 'registrationNumber', 'note', 'status', 'createdAt'])
+                    && request.resource.data.studentId == request.auth.uid
+                    && request.resource.data.status == 'NEW'
+                    && request.resource.data.note.size() <= 200
+                    && get(/databases/$(database)/documents/libraryIssues/$(request.resource.data.issueId)).data.studentId == request.auth.uid;
+      allow read: if isAdmin() || isLibrarian() || isSecurity()
+                  || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow update: if (isAdmin() || isLibrarian() || isSecurity())
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isAdmin();
+    }
+
     match /libraryIssues/{issueId} {
       allow read: if isAdmin() || isLibrarian() || (isStudent() && resource.data.studentId == request.auth.uid);
       allow write: if isAdmin() || isLibrarian();

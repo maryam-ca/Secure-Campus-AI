@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/tab_hero_header.dart';
 import '../../../models/dashboard_models.dart';
+import '../../../providers/issue_report_providers.dart';
 import '../../../providers/student_providers.dart';
 
 class LibrarySection extends ConsumerWidget {
@@ -39,12 +40,55 @@ class LibrarySection extends ConsumerWidget {
   }
 }
 
-class _IssueRow extends StatelessWidget {
+class _IssueRow extends ConsumerWidget {
   final LibraryIssueModel issue;
   const _IssueRow({required this.issue});
 
+  Future<void> _report(BuildContext context, WidgetRef ref) async {
+    final student = ref.read(studentProfileProvider).value;
+    if (student == null) return;
+    final noteController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Report unauthorized issue'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tell the librarian and security that you did not borrow "${issue.bookTitle}".'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              maxLength: 200,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'Note (optional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send report')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(issueReportRepositoryProvider).submit(issue: issue, student: student, note: noteController.text);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report sent to the librarian and security.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not send report: $e')));
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isOverdue = issue.status == LibraryIssueStatus.overdue;
     final dateFmt = DateFormat('dd MMM yyyy');
 
@@ -99,6 +143,13 @@ class _IssueRow extends StatelessWidget {
                     const Text('Fine: Rs. 100 (informational — no online payment)',
                         style: TextStyle(color: AppColors.error, fontSize: 11.5, fontWeight: FontWeight.w600)),
                   ],
+                  const SizedBox(height: 2),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 30)),
+                    onPressed: () => _report(context, ref),
+                    icon: const Icon(Icons.report_gmailerrorred_outlined, size: 16),
+                    label: const Text('I did not borrow this', style: TextStyle(fontSize: 12)),
+                  ),
                 ],
               ),
             ),

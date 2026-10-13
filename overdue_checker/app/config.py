@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # to minute.
     OVERDUE_CHECK_INTERVAL_SECONDS: float = 60.0
 
+    # A "due soon" notice is sent once when the return date is within this many hours.
+    DUE_SOON_HOURS: float = 48.0
+
     @field_validator("GOOGLE_APPLICATION_CREDENTIALS")
     @classmethod
     def _resolve_credentials_path(cls, v: str) -> str:
