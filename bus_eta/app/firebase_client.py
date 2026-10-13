@@ -100,19 +100,40 @@ def fetch_active_assignments_with_stops(bus_id: str) -> list[dict[str, Any]]:
     return out
 
 
-def mark_alert_sent(assignment_id: str, trip_id: str) -> None:
-    db().collection("busAssignments").document(assignment_id).update({"lastAlertTripId": trip_id})
+def mark_alert_sent(assignment_id: str, trip_id: str, stage: str) -> None:
+    """Records which reminder was sent for this trip so it is never repeated.
+    A final alert also marks the first one as handled."""
+    fields = {"alertFinalTripId": trip_id, "alertFirstTripId": trip_id} if stage == "final"         else {"alertFirstTripId": trip_id}
+    db().collection("busAssignments").document(assignment_id).update(fields)
 
 
-def notify_student_bus_arriving(student_id: str, stop_name: str, eta_minutes: float) -> None:
+_COPY = {
+    "first": {
+        "type": "BUS_20_MIN",
+        "title": "Get Ready - Bus Coming",
+        "message": "Your campus bus is about {eta} minutes from your stop ({stop}). Get ready to leave.",
+        "push": "Bus is about {eta} min from {stop} - get ready.",
+    },
+    "final": {
+        "type": "BUS_10_MIN",
+        "title": "Bus Arriving Soon",
+        "message": "Your campus bus is about {eta} minutes from your stop ({stop}). Head to your pickup point now.",
+        "push": "Bus is about {eta} min from {stop} - head to your stop now.",
+    },
+}
+
+
+def notify_student_bus(student_id: str, stop_name: str, eta_minutes: float, stage: str) -> None:
+    """In-app notification (always) + push (if the student has a token)."""
+    copy = _COPY[stage]
+    eta = max(1, round(eta_minutes))
     db().collection("notifications").add({
         "recipient": student_id,
-        "title": "Campus Bus Alert",
-        "message": f"Your assigned campus bus is approximately {round(eta_minutes)} minutes away "
-                   f"from your registered stop ({stop_name}).",
-        "type": "BUS_10_MIN",
+        "title": copy["title"],
+        "message": copy["message"].format(eta=eta, stop=stop_name),
+        "type": copy["type"],
         "isRead": False,
-        "metadata": {"stopName": stop_name, "etaMinutes": round(eta_minutes, 1)},
+        "metadata": {"stopName": stop_name, "etaMinutes": round(eta_minutes, 1), "stage": stage},
         "createdAt": firestore.SERVER_TIMESTAMP,
     })
 
@@ -122,8 +143,8 @@ def notify_student_bus_arriving(student_id: str, stop_name: str, eta_minutes: fl
         try:
             messaging.send(messaging.Message(
                 notification=messaging.Notification(
-                    title="Campus Bus Alert",
-                    body=f"Your bus is about {round(eta_minutes)} min from {stop_name}.",
+                    title=copy["title"],
+                    body=copy["push"].format(eta=eta, stop=stop_name),
                 ),
                 token=token,
             ))

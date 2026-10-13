@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-13 — Bus: two reminders per trip, 20 min then 10 min (A3.3, user addition)
+- **Type:** feature
+- **Areas:** bus_eta, mobile, config
+- **What changed:** `bus_eta` now sends **"Get Ready - Bus Coming" at ~20 min** and **"Bus Arriving Soon - head to your stop" at ~10 min**, each once per student per trip (`alertFirstTripId`, `alertFinalTripId` on `busAssignments`; legacy `lastAlertTripId` still blocks repeats). If the first reading is already inside 10 min (late trip start) only the final alert is sent. New setting `ALERT_FIRST_MINUTES=20` (`ALERT_THRESHOLD_MINUTES=10` unchanged). Notification type `BUS_20_MIN` shows the bus icon in the student Alerts list.
+- **Files:** bus_eta/app/{service,firebase_client,config,main}.py, bus_eta/tests/test_service.py, mobile/lib/features/student/widgets/notifications_section.dart, .env.example, docs/TODO.md
+- **Issue:** I-20 (partly: logic tested, not the live trip)
+- **Verified by:** `bus_eta` pytest 19/19 (5 old + 14 new: decision table, first→final sequence, no repeat, legacy field, new trip re-alerts, no active trip); `flutter analyze` 0 errors.
+- **Not verified:** a real driver GPS trip and push delivery. The proposal says one 10-minute alert; the 20-minute reminder is an addition requested by the team and should be mentioned to the supervisor.
+
 ### 2026-10-13 — Library: "due soon" notice and "report unauthorized issue" (A2.2–A2.4)
 - **Type:** feature
 - **Areas:** overdue_checker, mobile, firebase rules

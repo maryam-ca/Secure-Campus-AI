@@ -18,7 +18,7 @@ Rule for Part A: the existing eye-recognition and card code stays in the project
 | # | Decision |
 |---|---|
 | D-1 | Teacher dashboard not required |
-| D-2 | Students get bus status text only, 10 min before their pickup point (no student map) |
+| D-2 | Students get bus status text only (no student map). **Two in-app reminders per trip (added 2026-10-13): at 20 min "get ready", at 10 min "head to your stop"** |
 | D-3 | Card recovery must extract name + registration number from the photo (OCR) |
 | D-4 | **Use Firebase for login and storage (confirmed 2026-10-13).** Auth already Firebase. Alert images → Firebase Storage; Supabase removed. Bucket must still be created in the console (A1.8b) |
 | D-5 | Eye-image consent is handled in the last phase |
@@ -74,8 +74,8 @@ Flutter
 ## A3 — Bus tracking module (proposal §4.3, D-2)
 - [ ] A3.1 (M) Driver: start/stop trip, GPS to RTDB only while a trip is active (real phone, location permission)
 - [ ] A3.2 (M) Admin: bus, stops, driver account, assign students to stops; live map shows the marker (OpenStreetMap, A1.11)
-- [ ] A3.3 (M) `bus_eta`: notification **once per trip, ~10 min before the bus reaches that student's pickup point**; test with a walk/drive and a short threshold **I-20**
-- [ ] A3.4 (M) Student portal: bus status **text only** (assigned bus/stop, trip running or not, ETA, "arriving in ~10 min"); no map, no live location **I-25**
+- [ ] A3.3 (M) `bus_eta`: **two reminders per trip — 20 min ("get ready") and 10 min ("head to your stop")**, each once per student per trip. **Code + 19 unit tests done**; still to do: test with a real walk/drive and short thresholds **I-20**
+- [ ] A3.4 (M) Student portal: bus status **text only** (assigned bus/stop, trip running or not, ETA, and the 20/10-minute reminders in the Alerts list); no map, no live location **I-25**
 - [ ] A3.5 (S) Rules test: student cannot read `driverLocation` or others' assignments
 - [ ] A3.6 (S) ETA method: keep the free straight-line estimate at 25 km/h (leave `MAP_API_KEY` empty); state this in the report. Optional free upgrade: OSRM public routing API
 
