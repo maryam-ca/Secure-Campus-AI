@@ -94,10 +94,15 @@ def camera_status():
 
 
 @app.post("/iris/enroll", response_model=EnrollResponse)
-async def enroll_student(student_id: str = Form(...), image: UploadFile = File(...)):
-    """Admin flow: Admin captures/receives an iris image for a student and
+async def enroll_student(
+    student_id: str = Form(...),
+    image: UploadFile = File(...),
+    authorization: str | None = Header(default=None),
+):
+    """Admin-only (Bearer Firebase ID token). Admin flow: Admin captures/receives an iris image for a student and
     posts it here. Real image bytes in, real embedding computed and
     stored - no random assignment, no shortcutting."""
+    require_admin(authorization)
     raw = await image.read()
     arr = np.frombuffer(raw, dtype=np.uint8)
     bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
@@ -186,10 +191,11 @@ async def _capture_and_recognize(mode: str) -> RecognitionResponse:
 
 
 @app.post("/recognize/once", response_model=RecognitionResponse)
-async def recognize_once(mode: str = "attendance"):
-    """Manually trigger a single capture+recognize cycle - useful for
+async def recognize_once(mode: str = "attendance", authorization: str | None = Header(default=None)):
+    """Admin-only. Manually trigger a single capture+recognize cycle - useful for
     testing the camera/recognition wiring without waiting for the
     background polling loop."""
+    require_admin(authorization)
     return await _capture_and_recognize(mode)
 
 
