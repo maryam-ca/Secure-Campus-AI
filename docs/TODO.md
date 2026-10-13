@@ -93,14 +93,18 @@ Record each as pass/fail with date in the CHANGELOG. **I-20**
 
 ---
 
-## Decisions needed from you / supervisor
-| # | Question | Blocks |
+## Decisions (answered by you on 2026-10-13)
+| # | Decision | Effect on the plan |
 |---|---|---|
-| D-1 | Is the Teacher dashboard (shown in mockups) in scope? Code has none. | 2.9, report |
-| D-2 | Students: bus status text only, or live map? | 2.7 |
-| D-3 | Must card recovery do OCR, or is manual reg-no entry accepted? | 2.8 |
-| D-4 | Is Supabase (instead of Firebase Storage) acceptable as a declared deviation? | 6.1 |
-| D-5 | Do you have consent/ethics approval for collecting students' eye images? | 3.2 |
+| D-1 | Teacher dashboard **not required** | Close; list as out of scope in report. Task 2.9(a) done |
+| D-2 | Students get **bus status text only**, sent **10 min before the bus reaches their pickup point** | No student map. Task 2.7 = text status + the existing 10-min alert. Admin keeps the live map |
+| D-3 | Card recovery must **extract name + registration number from the photo (OCR)**, not manual | Task 2.8 is now mandatory: OCR (e.g. ML Kit text recognition) + match against `students` |
+| D-4 | **Use Firebase** (Storage), not Supabase | Task 1.10 changes: move alert images back to Firebase Storage and drop Supabase. **Needs the Blaze plan** for Storage; confirm you accept that (it was the reason for Supabase). Rewrite `storage.rules` accordingly |
+| D-5 | Eye-image consent: **in the last phase** | Task 3.2 consent step scheduled late; do not collect real student eye images before then |
+
+**Supervisor committee result (email, project SP26-SE-008): "Partially Accepted with changes".** The comments only restate the proposal and name *face recognition* for attendance and gate, while our approved proposal and code use *iris* recognition. The specific "changes" are not listed. Ask the supervisor in writing what must change before mid.
+
+**Phase split — needs your confirmation (see chat):** your message gives two versions of what is left for after mid (card recovery + eye recognition, or card recovery + bus tracking). Phases below are not re-ordered until you confirm.
 
 ## Critical path
 0 → 1.5/1.10 → 2.1 → 3.1–3.4 → 4 → 6. Phase 2 items 2.3–2.6 can be done in parallel with Phase 3 while waiting on data collection.
