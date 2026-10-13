@@ -23,3 +23,12 @@ services:
     volumes:
       - ./secrets:/service/secrets:ro
     restart: unless-stopped
+
+  overdue_checker:
+    build:
+      context: ./overdue_checker
+    env_file:
+      - .env
+    volumes:
+      - ./secrets:/service/secrets:ro
+    restart: unless-stopped

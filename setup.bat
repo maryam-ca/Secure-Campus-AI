@@ -38,6 +38,15 @@ pip install -r requirements.txt
 call .venv\Scripts\deactivate.bat
 cd ..
 
+echo -- overdue_checker: creating Python virtual environment --
+cd overdue_checker
+python -m venv .venv
+call .venv\Scriptsctivate.bat
+python -m pip install --upgrade pip >nul
+pip install -r requirements.txt
+call .venv\Scripts\deactivate.bat
+cd ..
+
 echo -- functions: creating Python virtual environment (local import checks only - deploy via firebase CLI) --
 cd functions
 python -m venv venv

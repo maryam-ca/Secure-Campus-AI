@@ -14,6 +14,9 @@ if not exist .env (
 echo == Starting bus_eta job in a new window ==
 start "SecureCampus bus_eta" cmd /k "cd bus_eta && call .venv\Scripts\activate.bat && python -m app.main"
 
+echo == Starting overdue_checker in a new window ==
+start "SecureCampus overdue_checker" cmd /k "cd overdue_checker && call .venv\Scripts\activate.bat && python -m app.main"
+
 echo == Starting iris_ai service on http://localhost:8000 ==
 cd iris_ai
 call .venv\Scripts\activate.bat

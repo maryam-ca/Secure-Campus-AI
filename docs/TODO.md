@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 2 / 44 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 5 / 44 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -41,9 +41,9 @@ Open question for the supervisor: the committee result says "Partially Accepted 
 
 ## A1 — Make everything that stays in scope correct and runnable
 Environment
-- [ ] A1.1 (S) Recreate `.venv` for `iris_ai`, `bus_eta`, `overdue_checker` from requirements; re-run pytest on pinned versions **I-12, I-21**
-- [ ] A1.2 (S) Add `overdue_checker` to `setup.*`, `run.*`, `docker-compose.yml` (+Dockerfile) **I-09**
-- [ ] A1.3 (S) Update `.env.example` (add overdue interval; Supabase vars removed after A1.8) **I-17**
+- [x] A1.1 (S) Recreate `.venv` for `iris_ai`, `bus_eta`, `overdue_checker` from requirements; re-run pytest on pinned versions **I-12, I-21**
+- [x] A1.2 (S) Add `overdue_checker` to `setup.*`, `run.*`, `docker-compose.yml` (+Dockerfile) **I-09**
+- [x] A1.3 (S) Update `.env.example` (add overdue interval; Supabase vars removed after A1.8) **I-17**
 - [ ] A1.4 (S) Decide canonical overdue job: `overdue_checker`; mark `functions/` deprecated **I-18**
 
 Security
@@ -52,7 +52,7 @@ Security
 - [ ] A1.7 (S) Rotate admin + seeded passwords; update `CREDENTIALS.md` **I-03**
 
 Storage (D-4, D-7)
-- [ ] A1.8 (S) **Keep Supabase** for alert images (free). Fix the broken Flutter widget to call the signed-URL endpoint `fetchSecurityAlertImageUrl` instead of Firebase Storage; add `supabase` to `iris_ai/requirements.txt`; add `SUPABASE_*` to `.env.example`; write `docs/SUPABASE_STORAGE_SETUP.md` **I-01, I-04, I-07, I-17**
+- [ ] A1.8 (S) **Keep Supabase** (done: `supabase==2.32.0` in requirements, `SUPABASE_*` in `.env.example`; still to do: Flutter widget + setup doc) for alert images (free). Fix the broken Flutter widget to call the signed-URL endpoint `fetchSecurityAlertImageUrl` instead of Firebase Storage; add `supabase` to `iris_ai/requirements.txt`; add `SUPABASE_*` to `.env.example`; write `docs/SUPABASE_STORAGE_SETUP.md` **I-01, I-04, I-07, I-17**
 - [ ] A1.8b (S) Optional, Part B: check console Build → Storage; if free on Spark, switch back to Firebase Storage and drop Supabase **I-31**
 
 Flutter
