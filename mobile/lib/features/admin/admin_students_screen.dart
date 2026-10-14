@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/student_filter.dart';
 import '../../core/widgets/confirm_dialog.dart';
 import '../../models/student_model.dart';
 import '../../providers/admin_providers.dart';
+import '../../providers/admin_student_providers.dart';
+import 'admin_student_overview_screen.dart';
 import '../../services/backend_api_service.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
@@ -21,16 +24,8 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  List<StudentModel> _filter(List<StudentModel> students) {
-    if (_query.isEmpty) return students;
-    final q = _query.toLowerCase();
-    return students
-        .where((s) =>
-            s.name.toLowerCase().contains(q) ||
-            s.registrationNumber.toLowerCase().contains(q) ||
-            s.program.toLowerCase().contains(q))
-        .toList();
-  }
+  IrisFilter _iris = IrisFilter.all;
+  int? _semester; // null = every semester
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +45,7 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
               controller: _searchController,
               onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
-                hintText: 'Search by name, registration number, or program',
+                hintText: 'Search name, ID (e.g. 007), program or email',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _query.isEmpty
                     ? null
@@ -72,33 +67,83 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                 if (allStudents.isEmpty) {
                   return const Center(child: Text('No students yet. Tap "Add Student" to create one.'));
                 }
-                final students = _filter(allStudents);
-                if (students.isEmpty) {
-                  return const Center(child: Text('No students match your search.'));
-                }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
-                  itemCount: students.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final s = students[i];
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.accentLightBlue,
-                          child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
-                              style: const TextStyle(color: AppColors.primaryBlueDark, fontWeight: FontWeight.w700)),
-                        ),
-                        title: Text(s.name),
-                        subtitle: Text('${s.registrationNumber} · ${s.program}, Sem ${s.semester}'
-                            '${s.irisEnrolled ? '' : '  ·  Iris NOT enrolled'}'),
-                        trailing: s.irisEnrolled
-                            ? const Icon(Icons.verified_user_outlined, color: AppColors.success, size: 20)
-                            : const Icon(Icons.warning_amber_outlined, color: AppColors.warning, size: 20),
-                        onTap: () => _openStudentDetailSheet(context, ref, s),
-                      ),
+                final students = filterStudents(allStudents, query: _query, iris: _iris, semester: _semester);
+                final counts = irisCounts(allStudents);
+                final semesters = semestersIn(allStudents);
+
+                Widget chip(String label, IrisFilter value) => ChoiceChip(
+                      label: Text(label),
+                      selected: _iris == value,
+                      onSelected: (_) => setState(() => _iris = value),
                     );
-                  },
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            chip('All (${counts.all})', IrisFilter.all),
+                            chip('Iris enrolled (${counts.enrolled})', IrisFilter.enrolled),
+                            chip('Not enrolled (${counts.notEnrolled})', IrisFilter.notEnrolled),
+                            PopupMenuButton<int?>(
+                              tooltip: 'Filter by semester',
+                              onSelected: (v) => setState(() => _semester = v),
+                              itemBuilder: (_) => [
+                                const PopupMenuItem<int?>(value: null, child: Text('All semesters')),
+                                for (final sem in semesters) PopupMenuItem<int?>(value: sem, child: Text('Semester $sem')),
+                              ],
+                              child: Chip(
+                                avatar: const Icon(Icons.filter_list, size: 18),
+                                label: Text(_semester == null ? 'Semester' : 'Semester $_semester'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('${students.length} of ${allStudents.length} students',
+                            style: const TextStyle(color: AppColors.bodyText, fontSize: 12)),
+                      ),
+                    ),
+                    Expanded(
+                      child: students.isEmpty
+                          ? const Center(child: Text('No students match your search or filters.'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+                              itemCount: students.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              itemBuilder: (context, i) {
+                                final s = students[i];
+                                return Card(
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: AppColors.accentLightBlue,
+                                      child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
+                                          style: const TextStyle(color: AppColors.primaryBlueDark, fontWeight: FontWeight.w700)),
+                                    ),
+                                    title: Text(s.name),
+                                    subtitle: Text('${s.registrationNumber} · ${s.program}, Sem ${s.semester}'
+                                        '${s.irisEnrolled ? '' : '  ·  Iris NOT enrolled'}'),
+                                    trailing: s.irisEnrolled
+                                        ? const Icon(Icons.verified_user_outlined, color: AppColors.success, size: 20)
+                                        : const Icon(Icons.warning_amber_outlined, color: AppColors.warning, size: 20),
+                                    onTap: () => _openStudentDetailSheet(context, ref, s),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -352,6 +397,7 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final s = widget.student;
+    final isActive = ref.watch(studentAccountActiveProvider(s.uid)).valueOrNull;
     return Padding(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -364,15 +410,37 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
           Text(s.name, style: Theme.of(context).textTheme.titleLarge),
           Text('${s.registrationNumber} · ${s.email}', style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 6,
             children: [
-              Icon(
-                s.irisEnrolled ? Icons.verified_user_outlined : Icons.warning_amber_outlined,
-                color: s.irisEnrolled ? AppColors.success : AppColors.warning,
-                size: 18,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    s.irisEnrolled ? Icons.verified_user_outlined : Icons.warning_amber_outlined,
+                    color: s.irisEnrolled ? AppColors.success : AppColors.warning,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(s.irisEnrolled ? 'Iris enrolled' : 'Iris not yet enrolled', overflow: TextOverflow.ellipsis)),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(s.irisEnrolled ? 'Iris enrolled' : 'Iris not yet enrolled'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isActive == false ? Icons.block : Icons.check_circle_outline,
+                    color: isActive == false ? AppColors.error : AppColors.success,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(isActive == null ? 'Account ...' : (isActive ? 'Account active' : 'Account deactivated'),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -399,10 +467,27 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                 icon: const Icon(Icons.camera_alt_outlined),
                 label: Text(s.irisEnrolled ? 'Re-enroll Iris' : 'Enroll Iris'),
               ),
-              OutlinedButton.icon(
-                onPressed: _busy ? null : () => _toggleActive(false),
-                icon: const Icon(Icons.block, color: AppColors.error),
-                label: const Text('Deactivate', style: TextStyle(color: AppColors.error)),
+              if (isActive == false)
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _toggleActive(true),
+                  icon: const Icon(Icons.check_circle_outline, color: AppColors.success),
+                  label: const Text('Reactivate', style: TextStyle(color: AppColors.success)),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _toggleActive(false),
+                  icon: const Icon(Icons.block, color: AppColors.error),
+                  label: const Text('Deactivate', style: TextStyle(color: AppColors.error)),
+                ),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AdminStudentOverviewScreen(student: widget.student)),
+                  );
+                },
+                icon: const Icon(Icons.person_search_outlined),
+                label: const Text('Full details'),
               ),
             ],
           ),

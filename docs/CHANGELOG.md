@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Students module, part 3: Admin student list filters, full student overview, working Reactivate
+- **Admin > Students list:**
+  - Search now finds a student by any part of the name, program, email or **ID** (`007`, `bse-00`, `FA23BSE001`).
+  - Filter chips with counts: **All (n) / Iris enrolled (n) / Not enrolled (n)**, plus a **Semester** filter (only the semesters that exist). A line shows "N of M students". The chips wrap onto two lines instead of running off the screen.
+- **Bug fixed:** the student sheet offered only **Deactivate**, while its own message said "you can reactivate them later from this same screen" - there was no Reactivate button. The sheet now shows the account status (active / deactivated) and a **Reactivate** button when the account is off.
+- **New: Full details** (button in the student sheet) opens a read-only overview: profile and status chips, **courses with attendance** (e.g. "6/10 - 60%", red under 75%, "no classes yet"), **library** (current books with due dates and OVERDUE, how many returned earlier) and the **bus** stop.
+- **Files:** mobile/lib/core/utils/student_filter.dart, mobile/lib/features/admin/{admin_students_screen,admin_student_overview_screen}.dart, mobile/lib/providers/admin_student_providers.dart, mobile/test/{student_filter_test,admin_students_test}.dart
+- **Verified by:** `flutter test` **93/93** (12 new: filter logic for text/ID/iris/semester/combined, counts; list shows chips with counts and narrows with each; search by ID part and name; semester filter; sheet shows Deactivate for an active account and **Reactivate** for a deactivated one; overview shows courses with attendance, overdue loan, returned count and bus stop); `flutter analyze` 0 errors. Writing the tests exposed two layout problems in my own first version (filter chips ran off a phone-width screen; the sheet's status line could overflow); both fixed with wrapping/shrinking layouts.
+- **Not verified:** on the phone; the actual Reactivate write (it only changes `users.active`, which admin rules already allow; the Firebase login itself is not re-enabled/disabled by this button, access is blocked by the app and the rules).
+
 ### 2026-10-14 — Students module, part 2: student Home screen, bus status text, unread badge, loan history (A3.4)
 - **Student dashboard** is now five tabs: **Home, Attendance, Bus, Library, Alerts**. The old blue profile header is gone; Home is the one-screen summary.
   - **Home:** white header card with the real logo, the student's name, registration number, program and semester; a **Needs attention** list (overdue books, books due within 2 days, the bus being within 20 minutes, unread alerts; otherwise "All clear"); tiles for **Attendance** (overall %, "8 of 10 classes"), **Books issued** (next due date or "N overdue"), **Unread alerts**, **Courses**; and a wide **Campus Bus** line with the stop and the live status sentence. Every item opens its tab. A test at 360 x 740 checks it needs no scrolling even with all four attention rows.
