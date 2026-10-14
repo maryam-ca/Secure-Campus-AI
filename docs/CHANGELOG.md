@@ -28,6 +28,21 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Library: search on the Issued list, verified returns (scan or typed ID), return from the Scan tab
+- **Type:** feature / safety fix (A2.1, A2.5 part)
+- **Areas:** mobile (librarian), Firestore data
+- **What was wrong:** The Issued list had no search, and the Return button returned the loan immediately without checking that the physical book matched. A mis-tap or the wrong book in hand silently returned the wrong loan.
+- **What changed:**
+  1. **Search bar** on the Issued list: matches book title, book ID, student name or student ID (any part, case-insensitive; IDs ignore dashes/spaces), from 2 characters. **All / Overdue** filter chips with counts and a "N shown" counter.
+  2. **Return now needs the book in hand:** tapping Return opens a camera screen. The scanned QR must match that loan's book. A wrong book is refused with a message naming the book that was scanned ("Wrong book. You scanned "X" (BOOK-002), but this return is for "Y" (BOOK-001)"); nothing changes.
+  3. **"Can't scan? Enter the book ID":** typing the matching ID, then a confirmation dialog (book, student, ID) returns it, recorded as manual.
+  4. **Return from the Scan tab:** scanning a book that is already issued now shows who has it, the due date, an OVERDUE tag, and a "Return this book" button (the scan is the proof).
+  5. **Audit trail:** each return stores `returnedAt`, `returnedBy` (librarian uid) and `returnMethod` (`scan` or `manual`) on the `libraryIssues` document, in addition to `returned: true`.
+- **Files:** mobile/lib/core/utils/issue_search.dart, mobile/lib/features/librarian/{return_verify_screen,librarian_issued_books_screen,librarian_scan_screen}.dart, mobile/lib/repositories/librarian_repository.dart, mobile/test/issue_search_test.dart
+- **Verified by:** `flutter test` 29/29 (new: issue search by title/ID/student, short query shows all, no match, book-code matching right/wrong/partial/empty); `flutter analyze` 0 errors; APK built and installed on the SM-A305F (update in place).
+- **Not verified:** the camera screens on the phone (scanner cannot run in unit tests); a real return end to end; the manual-ID path; the wrong-book message. Test with printed QR codes from `qr_codes/`.
+- **Notes:** No Firestore rule change was needed (librarians already write `libraryIssues` and `books`). Old returns made before today have no `returnedAt` / `returnMethod`. `returnMethod` is ready for the activity log (A4.4).
+
 ### 2026-10-14 — Librarian student search: by any part of ID or name, librarian picks (replaces the last-3-digits rule)
 - **Type:** change (UX), requested by the team
 - **Areas:** mobile (librarian)

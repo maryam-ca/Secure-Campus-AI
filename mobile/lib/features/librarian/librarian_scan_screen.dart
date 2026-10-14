@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/issue_search.dart';
 import '../../core/utils/student_search.dart';
 import '../../core/widgets/animated_shield_logo.dart';
 import '../../core/widgets/pressable_scale.dart';
@@ -135,12 +136,24 @@ class _LibrarianScanScreenState extends ConsumerState<LibrarianScanScreen> {
       return;
     }
 
+    // A book that is already issued: offer to return it right here. Scanning
+    // the book itself is the proof that the right book is in hand.
+    LibrarianIssueRow? openLoan;
+    if (!book.available) {
+      try {
+        openLoan = await ref.read(librarianRepositoryProvider).fetchActiveIssueForBook(book.id);
+      } catch (_) {
+        openLoan = null; // fall back to the normal sheet (shows "issued elsewhere")
+      }
+      if (!mounted) return;
+    }
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       backgroundColor: AppColors.cardBackground,
-      builder: (_) => _BookIssueSheet(book: book),
+      builder: (_) => openLoan != null ? _BookReturnSheet(issue: openLoan) : _BookIssueSheet(book: book),
     );
 
     if (mounted) setState(() {
@@ -640,6 +653,85 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
                         color: (_foundStudent == null || !book.available) ? AppColors.bodyText : Colors.white,
                       ),
                     ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when the scanned book is already issued: who has it, when it is due,
+/// and a Return button. The scan itself confirmed it is the right book.
+class _BookReturnSheet extends ConsumerStatefulWidget {
+  final LibrarianIssueRow issue;
+  const _BookReturnSheet({required this.issue});
+
+  @override
+  ConsumerState<_BookReturnSheet> createState() => _BookReturnSheetState();
+}
+
+class _BookReturnSheetState extends ConsumerState<_BookReturnSheet> {
+  bool _returning = false;
+  String? _error;
+
+  Future<void> _return() async {
+    setState(() {
+      _returning = true;
+      _error = null;
+    });
+    try {
+      await ref.read(librarianRepositoryProvider).returnBook(widget.issue, method: ReturnMethod.scan);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Returned "${widget.issue.bookTitle}" from ${widget.issue.studentName}.'),
+      ));
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not return the book: $e');
+    } finally {
+      if (mounted) setState(() => _returning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final issue = widget.issue;
+    final overdue = issue.isOverdue;
+    final fmt = DateFormat('dd MMM yyyy');
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(22, 18, 22, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('This book is currently issued',
+              style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(issue.bookTitle, style: Theme.of(context).textTheme.titleLarge),
+          Text(issue.bookId, style: const TextStyle(color: AppColors.bodyText)),
+          const SizedBox(height: 14),
+          Text('Issued to ${issue.studentName} (${issue.registrationNumber})',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(
+            'Issued ${fmt.format(issue.issueDate)} · Due ${fmt.format(issue.expiryDate)}${overdue ? ' · OVERDUE' : ''}',
+            style: TextStyle(color: overdue ? AppColors.error : AppColors.bodyText, fontWeight: overdue ? FontWeight.w700 : null),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: AppColors.error)),
+          ],
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _returning ? null : _return,
+              icon: _returning
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.assignment_return_outlined),
+              label: const Text('Return this book'),
             ),
           ),
         ],
