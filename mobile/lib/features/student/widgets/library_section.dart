@@ -45,7 +45,7 @@ class _IssueRow extends ConsumerWidget {
   const _IssueRow({required this.issue});
 
   Future<void> _report(BuildContext context, WidgetRef ref) async {
-    final student = ref.read(studentProfileProvider).value;
+    final student = ref.read(studentProfileProvider).valueOrNull;
     if (student == null) return;
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(

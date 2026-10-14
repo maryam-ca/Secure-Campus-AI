@@ -15,7 +15,7 @@ final bookLockHistoryProvider = StreamProvider.autoDispose.family<List<BookLockE
 /// The signed-in Librarian/Admin as the actor recorded in lock history, or
 /// null when nobody is signed in.
 final lockActorProvider = Provider<LockActor?>((ref) {
-  final user = ref.watch(currentAppUserProvider).value;
+  final user = ref.watch(currentAppUserProvider).valueOrNull;
   if (user == null) return null;
   return LockActor(uid: user.uid, name: user.name.isEmpty ? user.email : user.name, role: user.role.id);
 });
