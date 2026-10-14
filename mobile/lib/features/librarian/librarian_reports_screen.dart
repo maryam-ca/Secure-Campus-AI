@@ -15,9 +15,9 @@ class LibrarianReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final books = ref.watch(librarianBooksProvider).value ?? const <BookModel>[];
-    final loans = ref.watch(activeIssuesProvider).value ?? const <LibrarianIssueRow>[];
-    final reports = ref.watch(issueReportsProvider).value ?? const [];
+    final books = ref.watch(librarianBooksProvider).valueOrNull ?? const <BookModel>[];
+    final loans = ref.watch(activeIssuesProvider).valueOrNull ?? const <LibrarianIssueRow>[];
+    final reports = ref.watch(issueReportsProvider).valueOrNull ?? const [];
 
     final counts = catalogCounts(books, loans);
     final newReports = reports.where((r) => r.isOpen).length;

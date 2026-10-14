@@ -28,7 +28,7 @@ class _LibrarianHomeScreenState extends ConsumerState<LibrarianHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final newReports = ref.watch(issueReportsProvider).value?.where((r) => r.isOpen).length ?? 0;
+    final newReports = ref.watch(issueReportsProvider).valueOrNull?.where((r) => r.isOpen).length ?? 0;
 
     return PortalScaffold(
       title: 'Library Desk',

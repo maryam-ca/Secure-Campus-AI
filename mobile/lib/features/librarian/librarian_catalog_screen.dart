@@ -95,7 +95,7 @@ class _LibrarianCatalogScreenState extends ConsumerState<LibrarianCatalogScreen>
   @override
   Widget build(BuildContext context) {
     final booksAsync = ref.watch(librarianBooksProvider);
-    final loans = ref.watch(activeIssuesProvider).value ?? const <LibrarianIssueRow>[];
+    final loans = ref.watch(activeIssuesProvider).valueOrNull ?? const <LibrarianIssueRow>[];
     final dateFmt = DateFormat('dd MMM yyyy');
 
     return Container(

@@ -28,6 +28,17 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Fix: red error screen in the librarian portal when a Firestore query is denied
+- **Type:** fix (crash)
+- **Areas:** mobile (librarian, student library, lock actor)
+- **Symptom:** the phone showed Flutter's full red error screen after logging in as the librarian.
+- **Cause:** the new Home, Catalog and Reports screens read stream providers with `.value`. In Riverpod 2.6, `.value` rethrows when the stream has failed, so a failed query threw while the screen was building. The query that fails today is the students' reports (`issueReports`) because the new Firestore rules have not been deployed to the live project, so Firestore answers `permission-denied`. Reproduced with a test: against the old code both new tests fail with the `permission-denied` exception.
+- **Fix:** those reads now use `.valueOrNull` (a failed or loading stream just shows zero or empty), in `librarian_home_screen`, `librarian_catalog_screen`, `librarian_reports_screen`, `library_section` (student report button) and `book_lock_providers`. Existing pre-A2 code that still uses `.value` (auth and student providers) was left alone.
+- **Files:** mobile/lib/features/librarian/{librarian_home_screen,librarian_catalog_screen,librarian_reports_screen}.dart, mobile/lib/features/student/widgets/library_section.dart, mobile/lib/providers/book_lock_providers.dart, mobile/test/librarian_error_resilience_test.dart
+- **Verified by:** `flutter test` 40/40 (2 new regression tests: Reports tab and Catalog stay usable when the reports/loans streams fail); `flutter analyze` 0 errors; APK built and installed on the SM-A305F (update in place).
+- **Not verified:** on the phone (screen locked, UI not seen).
+- **Still needed:** deploy the rules (`firebase deploy --only firestore:rules`). Without them the Reports tab shows zeros and student reports / book locks are denied; the app no longer crashes, but those features do not work until the rules are live.
+
 ### 2026-10-14 — Fix: running the app from the project root (run_app.bat, install_app.bat)
 - **Type:** fix (tooling)
 - **Problem:** `flutter run` in the project root built a different app (`safekid_transport_assistant`, from `C:\Users\Maryam`) and failed with its errors. The SecureCampus Flutter app lives in `mobile/`; the root has no `pubspec.yaml`, so Flutter walks up to the first one it finds (the stray `C:\Users\Maryam\pubspec.yaml`).
