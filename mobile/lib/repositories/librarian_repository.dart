@@ -41,26 +41,41 @@ class LibrarianRepository {
     return snap.docs.map(StudentModel.fromFirestore).toList();
   }
 
+  /// Issues a book. The book is re-read inside a transaction, so a book that
+  /// was locked or issued by someone else a moment ago is refused instead of
+  /// being issued twice.
   Future<void> issueBook({
     required BookModel book,
     required StudentModel student,
     required DateTime issueDate,
     required DateTime expiryDate,
   }) async {
-    final batch = _db.batch();
+    final bookRef = _db.collection('books').doc(book.id);
     final issueRef = _db.collection('libraryIssues').doc();
-    batch.set(issueRef, {
-      'bookId': book.id,
-      'bookTitle': book.title,
-      'studentId': student.uid,
-      'studentName': student.name,
-      'registrationNumber': student.registrationNumber,
-      'issueDate': Timestamp.fromDate(issueDate),
-      'expiryDate': Timestamp.fromDate(expiryDate),
-      'returned': false,
+
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(bookRef);
+      final data = snap.data() ?? {};
+      if (data['locked'] == true) {
+        final why = (data['lockReason'] as String? ?? '').trim();
+        throw StateError('This book is locked${why.isEmpty ? '' : ': $why'}. It cannot be issued.');
+      }
+      if ((data['available'] as bool? ?? true) == false) {
+        throw StateError('This book is already issued to someone else.');
+      }
+
+      tx.set(issueRef, {
+        'bookId': book.id,
+        'bookTitle': book.title,
+        'studentId': student.uid,
+        'studentName': student.name,
+        'registrationNumber': student.registrationNumber,
+        'issueDate': Timestamp.fromDate(issueDate),
+        'expiryDate': Timestamp.fromDate(expiryDate),
+        'returned': false,
+      });
+      tx.update(bookRef, {'available': false});
     });
-    batch.update(_db.collection('books').doc(book.id), {'available': false});
-    await batch.commit();
   }
 
   /// Marks the loan returned and frees the book. [method] records how the

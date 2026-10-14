@@ -43,3 +43,8 @@ studnet*.jpeg
 
 # Demo logins for debug builds (contains passwords)
 mobile/demo_accounts.json
+
+# Rules-test dependencies
+firebase/rules-tests/node_modules/
+firestore-debug.log
+firebase-debug.log

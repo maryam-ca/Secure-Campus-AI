@@ -44,24 +44,85 @@ class BookModel {
   final String category;
   final bool available;
 
+  /// A locked book is kept physically in the safe and cannot be issued.
+  /// Only a book that has been received (returned) can be locked.
+  final bool locked;
+  final String lockReason;
+  final String lockedByName;
+  final DateTime? lockedAt;
+
   const BookModel({
     required this.id,
     required this.title,
     required this.author,
     required this.category,
     required this.available,
+    this.locked = false,
+    this.lockReason = '',
+    this.lockedByName = '',
+    this.lockedAt,
   });
 
-  factory BookModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? {};
+  factory BookModel.fromMap(String id, Map<String, dynamic> data) {
+    final lockedAt = data['lockedAt'];
     return BookModel(
-      id: doc.id,
+      id: id,
       title: data['title'] as String? ?? '',
       author: data['author'] as String? ?? '',
       category: data['category'] as String? ?? '',
       available: data['available'] as bool? ?? true,
+      locked: data['locked'] as bool? ?? false,
+      lockReason: data['lockReason'] as String? ?? '',
+      lockedByName: data['lockedByName'] as String? ?? '',
+      lockedAt: lockedAt is Timestamp ? lockedAt.toDate() : null,
     );
   }
+
+  factory BookModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      BookModel.fromMap(doc.id, doc.data() ?? {});
+}
+
+/// One entry in a book's lock history (books/{id}/lockHistory): who locked or
+/// unlocked it, in which role, when, and the reason they gave.
+class BookLockEvent {
+  static const lockAction = 'LOCK';
+  static const unlockAction = 'UNLOCK';
+
+  final String id;
+  final String action; // LOCK | UNLOCK
+  final String reason;
+  final String byUid;
+  final String byName;
+  final String byRole;
+  final DateTime? at;
+
+  const BookLockEvent({
+    required this.id,
+    required this.action,
+    required this.reason,
+    required this.byUid,
+    required this.byName,
+    required this.byRole,
+    required this.at,
+  });
+
+  bool get isLock => action == lockAction;
+
+  factory BookLockEvent.fromMap(String id, Map<String, dynamic> data) {
+    final at = data['at'];
+    return BookLockEvent(
+      id: id,
+      action: data['action'] as String? ?? '',
+      reason: data['reason'] as String? ?? '',
+      byUid: data['byUid'] as String? ?? '',
+      byName: data['byName'] as String? ?? '',
+      byRole: data['byRole'] as String? ?? '',
+      at: at is Timestamp ? at.toDate() : null,
+    );
+  }
+
+  factory BookLockEvent.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      BookLockEvent.fromMap(doc.id, doc.data() ?? {});
 }
 
 class GateEntryModel {

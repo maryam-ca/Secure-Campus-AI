@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/utils/catalog_logic.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
+import '../library/book_lock_ui.dart';
 
-enum _AvailabilityFilter { all, available, issued }
+enum _AvailabilityFilter { all, available, issued, locked }
 
 class AdminLibraryScreen extends ConsumerStatefulWidget {
   const AdminLibraryScreen({super.key});
@@ -22,9 +23,11 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
   List<BookModel> _apply(List<BookModel> books) {
     var result = books;
     if (_filter == _AvailabilityFilter.available) {
-      result = result.where((b) => b.available).toList();
+      result = result.where((b) => bookState(b) == BookState.available).toList();
     } else if (_filter == _AvailabilityFilter.issued) {
-      result = result.where((b) => !b.available).toList();
+      result = result.where((b) => bookState(b) == BookState.issued).toList();
+    } else if (_filter == _AvailabilityFilter.locked) {
+      result = result.where((b) => bookState(b) == BookState.locked).toList();
     }
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
@@ -64,6 +67,8 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
                 ChoiceChip(label: const Text('Available'), selected: _filter == _AvailabilityFilter.available, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.available)),
                 const SizedBox(width: 8),
                 ChoiceChip(label: const Text('Issued'), selected: _filter == _AvailabilityFilter.issued, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.issued)),
+                const SizedBox(width: 8),
+                ChoiceChip(label: const Text('Locked'), selected: _filter == _AvailabilityFilter.locked, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.locked)),
               ],
             ),
           ),
@@ -81,24 +86,33 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final b = books[i];
+                    final isLocked = bookState(b) == BookState.locked;
                     return Card(
                       child: ListTile(
                         title: Text(b.title),
-                        subtitle: Text('${b.id} · ${b.author} · ${b.category}'),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: (b.available ? AppColors.success : AppColors.warning).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            b.available ? 'AVAILABLE' : 'ISSUED',
-                            style: TextStyle(
-                              color: b.available ? AppColors.success : AppColors.warning,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 11,
+                        subtitle: Text(
+                          '${b.id} · ${b.author} · ${b.category}'
+                          '${isLocked ? '\nLocked by ${b.lockedByName.isEmpty ? 'unknown' : b.lockedByName}: ${b.lockReason}' : ''}',
+                        ),
+                        isThreeLine: isLocked,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BookStateBadge(book: b),
+                            PopupMenuButton<String>(
+                              tooltip: 'Book options',
+                              onSelected: (v) {
+                                if (v == 'lock') showLockBookDialog(context, ref, b);
+                                if (v == 'unlock') showUnlockBookDialog(context, ref, b);
+                                if (v == 'history') showLockHistorySheet(context, b);
+                              },
+                              itemBuilder: (_) => [
+                                if (!isLocked) const PopupMenuItem(value: 'lock', child: Text('Lock book...')),
+                                if (isLocked) const PopupMenuItem(value: 'unlock', child: Text('Unlock book...')),
+                                const PopupMenuItem(value: 'history', child: Text('Lock history')),
+                              ],
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     );
