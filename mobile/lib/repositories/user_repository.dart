@@ -22,6 +22,12 @@ class UserRepository {
     return AppUser.fromFirestore(doc);
   }
 
+  /// Called after the user has chosen their own password. firestore.rules
+  /// let a user clear only this one field, and only to false.
+  Future<void> clearMustResetPassword(String uid) {
+    return _db.collection('users').doc(uid).update({'mustResetPassword': false});
+  }
+
   Stream<AppUser?> watchUser(String uid) {
     return _db.collection('users').doc(uid).snapshots().map((doc) {
       if (!doc.exists) return null;

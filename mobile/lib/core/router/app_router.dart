@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/admin_home_shell.dart';
+import '../../features/auth/change_password_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/common/account_error_screen.dart';
 import '../../features/common/found_card_report_screen.dart';
@@ -15,6 +16,8 @@ import '../../features/security/security_dashboard_screen.dart';
 import '../../features/student/student_dashboard_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../constants/roles.dart';
+import 'password_gate.dart';
+import 'role_paths.dart';
 
 /// Bridges a Stream into a Listenable so go_router's `refreshListenable`
 /// re-evaluates `redirect` whenever auth state or the user's role
@@ -32,20 +35,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
   }
 }
 
-String _pathForRole(UserRole role) {
-  switch (role) {
-    case UserRole.admin:
-      return '/admin';
-    case UserRole.student:
-      return '/student';
-    case UserRole.security:
-      return '/security';
-    case UserRole.librarian:
-      return '/librarian';
-    case UserRole.driver:
-      return '/driver';
-  }
-}
+String _pathForRole(UserRole role) => homePathForRole(role);
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authRefresh = GoRouterRefreshStream(ref.watch(firebaseAuthStateProvider.stream));
@@ -63,6 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/account-error', builder: (_, __) => const AccountErrorScreen()),
+      GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
       GoRoute(path: '/report-lost-card', builder: (_, __) => const FoundCardReportScreen()),
       GoRoute(path: '/student', builder: (_, __) => const StudentDashboardScreen()),
       GoRoute(path: '/admin', builder: (_, __) => const AdminHomeShell()),
@@ -102,6 +93,17 @@ String? _redirect(Ref ref, GoRouterState state) {
   if (appUser == null || !appUser.active) {
     return loc == '/account-error' ? null : '/account-error';
   }
+
+  // First login with a temporary password: must choose a new one before anything else.
+  final gate = passwordGateRedirect(
+    user: appUser,
+    location: loc,
+    enforced: passwordChangeEnforced,
+    changedThisSession: ref.read(passwordChangedThisSessionProvider),
+  );
+  if (gate != null) return gate;
+  // Anyone signed in may open the change-password screen voluntarily.
+  if (loc == '/change-password') return null;
 
   final targetPath = _pathForRole(appUser.role);
   final onCorrectPortal = loc.startsWith(targetPath);

@@ -251,7 +251,8 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
               'semester': int.tryParse(_semester.text.trim()) ?? 1,
               'courses': _selectedCourses.toList(),
             },
-            password: _regNo.text.trim(),
+            // no password: the server generates a random temporary one,
+            // and the student must replace it at first login
           );
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -271,9 +272,10 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
       builder: (_) => AlertDialog(
         title: const Text('Student account created'),
         content: SelectableText(
-          'Email: ${result['email']}\nPassword (their registration number): ${result['temporaryPassword']}\n\n'
-          'Share this with the student securely - they should be told to have '
-          'Admin reset it again if forgotten (no self-service reset).',
+          'Email: ${result['email']}\nTemporary password: ${result['temporaryPassword']}\n\n'
+          'Give this to the student privately. They will be asked to choose '
+          'their own password the first time they sign in. If they forget it, '
+          'Admin can reset it from this screen.',
         ),
         actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
       ),
