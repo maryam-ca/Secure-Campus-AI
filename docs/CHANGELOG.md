@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Librarian: find the student by the last 3 digits (A2.1 fix)
+- **Type:** fix / UX
+- **Areas:** mobile (librarian)
+- **What was wrong:** In the issue sheet the student lookup was an exact Firestore query (`registrationNumber == typed text`). The librarian had to type the whole number (for example FA23-BSE-007) with the right case and dashes, then tap the search icon; it returned at most one student.
+- **What changed:** Typing the last 3 or more characters now searches live. The match ignores case, dashes and spaces and compares the END of the registration number. One match is selected automatically; several matches (the same digits in two intakes, such as FA22-BSE-007 and FA23-BSE-007) are shown as a list to tap. A selected student shows name, registration number, program and semester. Students load once when the sheet opens (the librarian role may already read `students`, so there are no rule changes).
+- **Files:** mobile/lib/core/utils/student_search.dart, mobile/lib/repositories/librarian_repository.dart, mobile/lib/features/librarian/librarian_scan_screen.dart, mobile/test/student_search_test.dart
+- **Verified by:** `flutter test` 21/21 (6 new search tests: last 3 digits, two intakes, long forms in any case, under 3 characters, end-not-middle); `flutter analyze` 0 errors; APK built and installed on the SM-A305F.
+- **Not verified:** the new sheet itself on the phone (needs a librarian login and a scanned book).
+- **Notes:** The whole student list is fetched per issue; fine for hundreds of students, revisit if it grows to thousands. The debug signing key on this PC was recreated at 19:59 today (cause not found), so the copy on the phone had to be replaced; `flutter install` does this. If the key is recreated again, expect the same.
+
 ### 2026-10-14 — Login screen: "Demo accounts" list, tap to sign in (testing aid)
 - **Type:** feature (testing)
 - **Areas:** mobile, scripts

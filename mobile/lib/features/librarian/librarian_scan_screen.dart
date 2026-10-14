@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/student_search.dart';
 import '../../core/widgets/animated_shield_logo.dart';
 import '../../core/widgets/pressable_scale.dart';
 import '../../models/admin_models.dart';
@@ -331,26 +332,66 @@ class _BookIssueSheet extends ConsumerStatefulWidget {
 
 class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
   final _regNoController = TextEditingController();
+  List<StudentModel> _allStudents = const [];
+  List<StudentModel> _matches = const [];
   StudentModel? _foundStudent;
-  bool _searching = false;
+  bool _searching = true; // true while the student list is loading
   bool _submitting = false;
   String? _error;
 
   DateTime _dueDate = DateTime.now().add(const Duration(days: 14));
 
-  Future<void> _lookupStudent() async {
-    final regNo = _regNoController.text.trim();
-    if (regNo.isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  @override
+  void dispose() {
+    _regNoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadStudents() async {
+    try {
+      final students = await ref.read(librarianRepositoryProvider).fetchAllStudents();
+      if (!mounted) return;
+      setState(() {
+        _allStudents = students;
+        _searching = false;
+      });
+      _onQueryChanged(_regNoController.text);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _searching = false;
+        _error = 'Could not load students: $e';
+      });
+    }
+  }
+
+  /// Runs on every keystroke: the last 3+ characters of the registration
+  /// number are enough. One match is selected automatically; several
+  /// (e.g. the same number in two intakes) are listed to pick from.
+  void _onQueryChanged(String text) {
+    final q = text.trim();
+    final matches = searchStudentsByRegNo(_allStudents, q);
     setState(() {
-      _searching = true;
-      _error = null;
-      _foundStudent = null;
+      _matches = matches;
+      _foundStudent = matches.length == 1 ? matches.first : null;
+      _error = (q.isNotEmpty && normalizeRegNo(q).length >= studentSearchMinChars && matches.isEmpty && !_searching)
+          ? 'No student found ending in "$q".'
+          : null;
     });
-    final student = await ref.read(librarianRepositoryProvider).findStudentByRegistrationNumber(regNo);
+  }
+
+  void _pickStudent(StudentModel s) {
     setState(() {
-      _searching = false;
-      _foundStudent = student;
-      if (student == null) _error = 'No student found with registration number "$regNo".';
+      _foundStudent = s;
+      _matches = [s];
+      _regNoController.text = s.registrationNumber;
+      _regNoController.selection = TextSelection.collapsed(offset: _regNoController.text.length);
     });
   }
 
@@ -480,14 +521,38 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
           const SizedBox(height: 20),
           TextField(
             controller: _regNoController,
-            decoration: InputDecoration(
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
               labelText: 'Student registration number',
-              prefixIcon: const Icon(Icons.badge_outlined),
-              suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _searching ? null : _lookupStudent),
+              helperText: 'Type the last 3 digits (e.g. 007) to find the student',
+              prefixIcon: Icon(Icons.badge_outlined),
+              suffixIcon: Icon(Icons.search),
             ),
-            onSubmitted: (_) => _lookupStudent(),
+            onChanged: _onQueryChanged,
           ),
           if (_searching) const Padding(padding: EdgeInsets.only(top: 10), child: LinearProgressIndicator()),
+          if (_foundStudent == null && _matches.length > 1)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              constraints: const BoxConstraints(maxHeight: 180),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final s in _matches)
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.person_outline),
+                      title: Text(s.name),
+                      subtitle: Text('${s.registrationNumber} · ${s.program}, Sem ${s.semester}'),
+                      onTap: () => _pickStudent(s),
+                    ),
+                ],
+              ),
+            ),
           if (_foundStudent != null)
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
@@ -507,7 +572,7 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${_foundStudent!.name} — ${_foundStudent!.program}, Sem ${_foundStudent!.semester}',
+                        '${_foundStudent!.name} (${_foundStudent!.registrationNumber}) — ${_foundStudent!.program}, Sem ${_foundStudent!.semester}',
                         style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600),
                       ),
                     ),

@@ -30,6 +30,15 @@ class LibrarianRepository {
     return StudentModel.fromFirestore(snap.docs.first);
   }
 
+  /// Every student record, loaded once when the issue sheet opens so the
+  /// librarian can find a student by typing only the last digits of the
+  /// registration number (Firestore cannot query "ends with"). The librarian
+  /// role may read `students` (firestore.rules); fine for a campus-sized list.
+  Future<List<StudentModel>> fetchAllStudents() async {
+    final snap = await _db.collection('students').get();
+    return snap.docs.map(StudentModel.fromFirestore).toList();
+  }
+
   Future<void> issueBook({
     required BookModel book,
     required StudentModel student,
