@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:securecampus/core/widgets/animated_shield_logo.dart';
 import 'package:securecampus/features/admin/admin_dashboard_screen.dart';
 import 'package:securecampus/models/admin_models.dart';
 import 'package:securecampus/models/app_user.dart';
@@ -60,8 +61,8 @@ Future<ProviderContainer> _pump(
   List<IssueReportModel> reports = const [],
   bool statsFail = false,
 }) async {
-  // a typical phone: 360 x 780 logical pixels
-  tester.view.physicalSize = const Size(1080, 2340);
+  // a typical phone: 360 x 740 logical pixels
+  tester.view.physicalSize = const Size(1080, 2220);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
 
@@ -106,38 +107,45 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
 }
 
 void main() {
-  testWidgets('shows the greeting, the groups and every number', (tester) async {
+  testWidgets('shows the greeting and the five key numbers, with nothing repeated', (tester) async {
     await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
     expect(find.textContaining('Campus Admin'), findsOneWidget);
-    expect(find.text('Campus today'), findsOneWidget);
-    expect(find.text('Library'), findsNWidgets(2)); // the quick action and the section title
-    await _reveal(tester, find.text('Transport'));
-    expect(find.text('Transport'), findsOneWidget);
-
-    for (final label in [
-      'Total Students',
-      "Today's Attendance",
-      "Today's Gate Entries",
-      'Unknown Alerts (open)',
-      'Library Books',
-      'Issued Books',
-      'Overdue Books',
-      'Locked Books',
-      'Bus Status',
-    ]) {
-      await _reveal(tester, find.text(label));
+    expect(find.byType(AnimatedShieldLogo), findsOneWidget); // the real app logo
+    expect(find.text('SecureCampus'), findsOneWidget);
+    for (final label in ['Total Students', 'Attendance', 'Gate Entries', 'Library Books', 'Bus Status']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.text('2 issued · 1 locked'), findsOneWidget); // library note: issued and locked together
+    expect(find.text('10'), findsOneWidget); // total students
+    expect(find.text('today'), findsNWidgets(2)); // attendance and gate entries are for today
+
+    // removed as duplicates / clutter
+    for (final gone in ['Unknown Alerts (open)', 'Overdue Books', 'Locked Books', 'Issued Books', 'Campus today', 'Quick actions']) {
+      expect(find.text(gone), findsNothing, reason: gone);
+    }
+    // the side-menu shortcuts are gone too
+    expect(find.text('Students'), findsNothing);
+    expect(find.text('Camera'), findsNothing);
   });
 
-  testWidgets('nothing overflows on a phone, even with a long bus status', (tester) async {
-    await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
+  testWidgets('everything fits on one phone screen: no scrolling needed', (tester) async {
+    await _pump(tester, loans: [_overdueLoan()], reports: [_report()]); // worst case: all 3 attention rows
+
+    final position = tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    expect(position.maxScrollExtent, 0, reason: 'dashboard should not need scrolling');
     expect(tester.takeException(), isNull);
-    // the bus status is shown in full, not cut to "Idle (last known ..."
-    await _reveal(tester, find.text('Bus Status'));
+    // every card is on screen without scrolling
+    expect(find.text('Bus Status'), findsOneWidget);
+    final bus = tester.getRect(find.text('Bus Status'));
+    // the real screen also has a status bar (~28px) and the app bar (56px): ~650px left for the page
+    expect(bus.bottom, lessThan(650), reason: 'bus card must end above the bottom of the real page area');
+  });
+
+  testWidgets('a long bus status is shown in full and nothing overflows', (tester) async {
+    await _pump(tester);
+    expect(tester.takeException(), isNull);
     expect(find.textContaining('3 days ago'), findsOneWidget);
-    expect(tester.takeException(), isNull);
   });
 
   testWidgets('"Needs attention" lists open alerts, overdue books and new reports', (tester) async {
@@ -174,40 +182,21 @@ void main() {
     expect(c.read(adminLibraryTabProvider), 1);
   });
 
-  testWidgets('every stat card opens its section when tapped', (tester) async {
+  testWidgets('every card opens its section when tapped', (tester) async {
     final c = await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
     final taps = <String, int>{
       'Total Students': AdminSection.students,
       'Library Books': AdminSection.library,
-      'Issued Books': AdminSection.library,
-      'Overdue Books': AdminSection.library,
-      'Locked Books': AdminSection.library,
       'Bus Status': AdminSection.bus,
-      "Today's Gate Entries": AdminSection.gateSecurity,
-      'Unknown Alerts (open)': AdminSection.gateSecurity,
-      "Today's Attendance": AdminSection.gateSecurity,
+      'Gate Entries': AdminSection.gateSecurity,
+      'Attendance': AdminSection.gateSecurity,
     };
 
     for (final entry in taps.entries) {
       c.read(adminSectionProvider.notifier).state = AdminSection.dashboard;
       await _tap(tester, find.text(entry.key));
       expect(c.read(adminSectionProvider), entry.value, reason: 'card "${entry.key}"');
-    }
-  });
-
-  testWidgets('quick actions open Students, Library, Security and Camera', (tester) async {
-    final c = await _pump(tester);
-
-    final taps = <String, int>{
-      'Students': AdminSection.students,
-      'Security': AdminSection.gateSecurity,
-      'Camera': AdminSection.camera,
-    };
-    for (final entry in taps.entries) {
-      c.read(adminSectionProvider.notifier).state = AdminSection.dashboard;
-      await _tap(tester, find.text(entry.key));
-      expect(c.read(adminSectionProvider), entry.value, reason: 'quick action "${entry.key}"');
     }
   });
 
