@@ -1,3 +1,4 @@
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -24,7 +25,7 @@ def test_decide_alert(eta, first_sent, final_sent, expected):
 
 def _setup(monkeypatch, eta, assignment):
     fc = MagicMock()
-    fc.read_driver_location.return_value = SimpleNamespace(trip_active=True, trip_id="T1", lat=1.0, lng=2.0)
+    fc.read_driver_location.return_value = SimpleNamespace(trip_active=True, trip_id="T1", lat=1.0, lng=2.0, updated_at=time.time() * 1000)
     fc.fetch_active_assignments_with_stops.return_value = [
         {"id": "a1", "studentId": "s1", "stopName": "Block A", "stopLat": 3.0, "stopLng": 4.0, **assignment}
     ]
@@ -129,3 +130,48 @@ def test_statuses_are_cleared_once_when_the_trip_ends(monkeypatch):
     service.run_once()  # a later idle cycle does no more work
     fc.update_trip_status.assert_not_called()
     fc.fetch_active_assignments_with_stops.assert_called_once()
+
+
+# ---------------------------------------------------------------- lost / stale GPS
+from app.service import is_stale
+
+
+def test_is_stale_rules():
+    now = 1_000_000_000_000.0
+    assert is_stale(None, now, 180) is True                  # never had a timestamp
+    assert is_stale(0, now, 180) is True
+    assert is_stale(now - 60_000, now, 180) is False         # 1 minute old
+    assert is_stale(now - 181_000, now, 180) is True         # just over the limit
+
+
+def _stale_trip(monkeypatch, age_seconds, assignment=None):
+    fc = _setup(monkeypatch, 5, assignment or {})
+    fc.read_driver_location.return_value = SimpleNamespace(
+        trip_active=True, trip_id="T1", lat=1.0, lng=2.0, updated_at=(time.time() - age_seconds) * 1000)
+    return fc
+
+
+def test_a_stale_location_sends_no_alerts_and_no_status(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", False)
+    fc = _stale_trip(monkeypatch, age_seconds=600)
+    assert service.run_once() == 0
+    fc.notify_student_bus.assert_not_called()
+    fc.update_trip_status.assert_not_called()
+
+
+def test_when_the_location_goes_stale_mid_trip_the_student_statuses_are_cleared_once(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", True)
+    fc = _stale_trip(monkeypatch, age_seconds=600, assignment={"tripActive": True, "etaMinutes": 7})
+    service.run_once()
+    fc.update_trip_status.assert_called_once_with("a1", False, None)
+
+    fc.update_trip_status.reset_mock()
+    service.run_once()  # still stale: no repeated work
+    fc.update_trip_status.assert_not_called()
+
+
+def test_a_fresh_location_is_still_used(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", False)
+    fc = _stale_trip(monkeypatch, age_seconds=20)
+    service.run_once()
+    fc.update_trip_status.assert_called_once()

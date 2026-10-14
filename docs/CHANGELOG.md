@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Driver/bus module, step 1a + 2a: lost-GPS protection and seat/route rules (pure logic)
+- **Flaw found in my own earlier work:** `bus_eta` did not look at how old the driver's location was, so a driver phone that died or lost GPS mid-trip still looked "live" and students kept seeing a stale status.
+- **Fix:** locations older than `LOCATION_STALE_SECONDS` (180 s) are ignored: no alerts, and student statuses are cleared once (`is_stale()` in `bus_eta/app/service.py`).
+- **Added (not yet wired into screens):** `mobile/lib/core/utils/bus_capacity.dart` (block assigning a student when the bus is full; seat summary; stop reordering; stop order for to-campus vs from-campus trips) and `mobile/lib/models/transport_models.dart` (`BusInfo`, `CampusLocation`, `TripDirection`).
+- **Verified by:** `bus_eta` pytest 32 passed; new `bus_capacity_test.dart` 14 passed.
+- **Not verified:** on a phone; the screens that use the new logic come in the next steps.
+
 ### 2026-10-14 — Students module, part 4: bulk import of students from a CSV file (proposal: "Admin can upload student data")
 - **Where:** Admin > Students, the upload button next to the search box opens **Import students**.
 - **Flow (nothing is created until the Admin confirms):**
