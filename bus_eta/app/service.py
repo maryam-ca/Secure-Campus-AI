@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import time
 
 from app import firebase_client
 from app.config import settings
@@ -46,6 +47,15 @@ def should_write_status(stored_active, stored_eta, stored_updated_at, new_eta: i
 _trip_was_active = False  # to clear the statuses once when a trip ends
 
 
+def is_stale(updated_at_ms: float | None, now_ms: float, limit_seconds: float) -> bool:
+    """True when the driver's last location is older than the limit (or has no
+    timestamp). Pure so it can be tested. The timestamp is written by the
+    database server, so a wrong clock on the driver's phone cannot fake freshness."""
+    if not updated_at_ms:
+        return True
+    return (now_ms - updated_at_ms) / 1000.0 > limit_seconds
+
+
 def decide_alert(eta_minutes: float, first_sent: bool, final_sent: bool,
                  first_threshold: float, final_threshold: float) -> str | None:
     """Which alert (if any) to send now. Pure function so it can be unit
@@ -65,13 +75,21 @@ def run_once() -> int:
     location = firebase_client.read_driver_location(settings.BUS_ID)
 
     global _trip_was_active
-    if location is None or not location.trip_active:
+    lost = (
+        location is not None
+        and location.trip_active
+        and is_stale(getattr(location, "updated_at", None), time.time() * 1000, settings.LOCATION_STALE_SECONDS)
+    )
+    if location is None or not location.trip_active or lost:
         if _trip_was_active:
             _trip_was_active = False
             for a in firebase_client.fetch_active_assignments_with_stops(settings.BUS_ID):
                 if a.get("tripActive") is True:
                     firebase_client.update_trip_status(a["id"], False, None)
-            log.info("bus %s: trip ended - student statuses cleared", settings.BUS_ID)
+            log.info("bus %s: %s - student statuses cleared", settings.BUS_ID,
+                     "location lost (no update for %ss)" % int(settings.LOCATION_STALE_SECONDS) if lost else "trip ended")
+        elif lost:
+            log.warning("bus %s: trip marked active but the location is stale - ignoring it", settings.BUS_ID)
         else:
             log.info("bus %s: no active trip - nothing to do", settings.BUS_ID)
         return 0
