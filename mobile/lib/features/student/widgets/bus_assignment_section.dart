@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/tab_hero_header.dart';
+import '../../../models/dashboard_models.dart';
 import '../../../providers/student_providers.dart';
 
 class BusAssignmentSection extends ConsumerWidget {
@@ -67,9 +70,12 @@ class BusAssignmentSection extends ConsumerWidget {
                   const SizedBox(height: 14),
                   _row('Bus', assignment.busId),
                   _row('Registered Stop', assignment.stopName),
-                  const SizedBox(height: 10),
-                  Text(
-                    "You'll get a notification when the bus is about 10 minutes from your stop.",
+                  const SizedBox(height: 12),
+                  BusStatusBanner(assignment: assignment),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "You'll get an alert about 20 minutes before the bus reaches your stop (get ready), "
+                    'and another at about 10 minutes (head to your stop).',
                     style: TextStyle(color: AppColors.bodyText, fontSize: 12.5),
                   ),
                 ],
@@ -88,6 +94,66 @@ class BusAssignmentSection extends ConsumerWidget {
         children: [
           SizedBox(width: 130, child: Text(label, style: const TextStyle(color: AppColors.bodyText, fontSize: 13))),
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+        ],
+      ),
+    );
+  }
+}
+
+/// The bus status as a plain sentence, coloured by urgency. Re-evaluated every
+/// 30 seconds so a status that stops being refreshed turns into
+/// "No trip in progress" on its own (it is never left saying "on its way").
+class BusStatusBanner extends StatefulWidget {
+  final BusAssignmentModel assignment;
+
+  /// Injectable clock for tests.
+  final DateTime Function() clock;
+  const BusStatusBanner({super.key, required this.assignment, this.clock = DateTime.now});
+
+  @override
+  State<BusStatusBanner> createState() => _BusStatusBannerState();
+}
+
+class _BusStatusBannerState extends State<BusStatusBanner> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final info = widget.assignment.tripInfo(widget.clock());
+    final (color, icon) = switch (info.level) {
+      BusTripLevel.headOut => (AppColors.success, Icons.directions_run),
+      BusTripLevel.getReady => (AppColors.warning, Icons.alarm),
+      BusTripLevel.onTheWay => (AppColors.primaryBlue, Icons.directions_bus_filled_outlined),
+      BusTripLevel.idle => (AppColors.bodyText, Icons.info_outline),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(child: Text(info.text, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 14))),
         ],
       ),
     );

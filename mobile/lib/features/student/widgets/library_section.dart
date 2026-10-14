@@ -29,10 +29,17 @@ class LibrarySection extends ConsumerWidget {
           error: (_, __) => const Text('Could not load library records.', style: TextStyle(color: AppColors.error)),
           data: (issues) {
             final active = issues.where((i) => i.status != LibraryIssueStatus.returned).toList();
-            if (active.isEmpty) {
-              return const Text('No books currently issued.', style: TextStyle(color: AppColors.bodyText));
-            }
-            return Column(children: active.map((issue) => _IssueRow(issue: issue)).toList());
+            final history = issues.where((i) => i.status == LibraryIssueStatus.returned).toList();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (active.isEmpty)
+                  const Text('No books currently issued.', style: TextStyle(color: AppColors.bodyText))
+                else
+                  ...active.map((issue) => _IssueRow(issue: issue)),
+                if (history.isNotEmpty) _History(history: history),
+              ],
+            );
           },
         ),
       ],
@@ -166,6 +173,37 @@ class _IssueRow extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Books the student has already returned (most recent first), so they can see
+/// what they borrowed before. Collapsed by default to keep the tab short.
+class _History extends StatelessWidget {
+  final List<LibraryIssueModel> history;
+  const _History({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('d MMM yyyy');
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: Text('Returned books (${history.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+        children: [
+          for (final h in history)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+              title: Text(h.bookTitle),
+              subtitle: Text(h.returnedAt == null
+                  ? 'Issued ${fmt.format(h.issueDate)}'
+                  : 'Issued ${fmt.format(h.issueDate)} · returned ${fmt.format(h.returnedAt!)}'),
+            ),
+        ],
       ),
     );
   }
