@@ -150,3 +150,15 @@ def notify_student_bus(student_id: str, stop_name: str, eta_minutes: float, stag
             ))
         except Exception:
             pass  # in-app notification above still stands regardless of push delivery
+
+
+def update_trip_status(assignment_id: str, trip_active: bool, eta_minutes: int | None) -> None:
+    """A tiny status the student's own app can read (students may read their own
+    busAssignments document but never the driver's live location): is a trip
+    running, and about how many minutes from their stop. The app treats it as
+    stale after a few minutes, so a stopped service never shows a false 'on its way'."""
+    db().collection("busAssignments").document(assignment_id).update({
+        "tripActive": trip_active,
+        "etaMinutes": eta_minutes,
+        "statusUpdatedAt": firestore.SERVER_TIMESTAMP,
+    })

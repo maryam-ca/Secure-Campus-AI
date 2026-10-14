@@ -47,3 +47,35 @@ final studentNotificationsProvider = StreamProvider<List<AppNotification>>((ref)
   if (appUser == null) return Stream.value(const []);
   return ref.watch(studentRepositoryProvider).watchNotifications(appUser.uid);
 });
+
+/// Alerts the student has not opened yet (drives the badge on the Alerts tab).
+final unreadNotificationsCountProvider = Provider<int>((ref) {
+  final list = ref.watch(studentNotificationsProvider).valueOrNull ?? const <AppNotification>[];
+  return list.where((n) => !n.isRead).length;
+});
+
+/// Present / total classes over all of the student's courses, or null until
+/// the course figures have loaded. `total` is 0 when no class has run yet.
+class AttendanceOverall {
+  final int present;
+  final int total;
+  final int courses;
+  const AttendanceOverall({required this.present, required this.total, required this.courses});
+
+  double? get percentage => total == 0 ? null : present / total * 100;
+}
+
+final overallAttendanceProvider = Provider<AttendanceOverall?>((ref) {
+  final courses = ref.watch(studentCoursesProvider).valueOrNull;
+  if (courses == null) return null;
+  var present = 0, total = 0, loaded = 0;
+  for (final c in courses) {
+    final s = ref.watch(courseAttendanceProvider(c)).valueOrNull;
+    if (s == null) continue;
+    loaded++;
+    present += s.present;
+    total += s.totalSessions;
+  }
+  if (loaded < courses.length) return null;
+  return AttendanceOverall(present: present, total: total, courses: courses.length);
+});

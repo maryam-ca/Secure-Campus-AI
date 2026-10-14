@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/roles.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/widgets/portal_scaffold.dart';
 import '../../providers/student_providers.dart';
 import 'widgets/attendance_section.dart';
 import 'widgets/bus_assignment_section.dart';
 import 'widgets/library_section.dart';
 import 'widgets/notifications_section.dart';
+import 'widgets/student_home_section.dart';
 
 /// Shows only the signed-in student's own data - profile, their own
 /// registered courses' attendance, their own bus assignment, their own
@@ -25,18 +25,12 @@ class StudentDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentDashboardScreenState extends ConsumerState<StudentDashboardScreen> {
-  int _tab = 0;
-
-  static const _tabs = [
-    AttendanceSection(),
-    BusAssignmentSection(),
-    LibrarySection(),
-    NotificationsSection(),
-  ];
+  int _tab = StudentTab.home;
 
   @override
   Widget build(BuildContext context) {
     final studentAsync = ref.watch(studentProfileProvider);
+    final unread = ref.watch(unreadNotificationsCountProvider);
 
     return PortalScaffold(
       title: 'My Campus',
@@ -48,106 +42,37 @@ class _StudentDashboardScreenState extends ConsumerState<StudentDashboardScreen>
           if (student == null) {
             return const Center(child: Text('No student record found for this account.'));
           }
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _ProfileHeader(
-                  name: student.name,
-                  regNo: student.registrationNumber,
-                  program: student.program,
-                  semester: student.semester,
-                ),
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 320),
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween(begin: 0.97, end: 1.0).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-                      child: child,
-                    ),
-                  ),
-                  child: KeyedSubtree(key: ValueKey(_tab), child: _tabs[_tab]),
-                ),
-              ),
-            ],
+          final tabs = <Widget>[
+            StudentHomeSection(onOpenTab: (i) => setState(() => _tab = i)),
+            const AttendanceSection(),
+            const BusAssignmentSection(),
+            const LibrarySection(),
+            const NotificationsSection(),
+          ];
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+            child: KeyedSubtree(key: ValueKey(_tab), child: tabs[_tab]),
           );
         },
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Attendance'),
-          NavigationDestination(icon: Icon(Icons.directions_bus_filled_outlined), label: 'Bus'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Library'),
-          NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Alerts'),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileHeader extends StatelessWidget {
-  final String name;
-  final String regNo;
-  final String program;
-  final int semester;
-
-  const _ProfileHeader({required this.name, required this.regNo, required this.program, required this.semester});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) => Opacity(opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 10), child: child)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryBlue, AppColors.primaryBlueDark],
+        destinations: [
+          const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+          const NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Attendance'),
+          const NavigationDestination(icon: Icon(Icons.directions_bus_filled_outlined), label: 'Bus'),
+          const NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Library'),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            label: 'Alerts',
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(color: AppColors.primaryBlue.withValues(alpha: 0.35), blurRadius: 20, offset: const Offset(0, 8)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 24),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 19)),
-                  const SizedBox(height: 3),
-                  Text(regNo, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
-                  Text('$program · Semester $semester', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
-                ],
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

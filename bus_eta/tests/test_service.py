@@ -72,3 +72,60 @@ def test_no_alerts_without_active_trip(monkeypatch):
     fc = _setup(monkeypatch, 5, {})
     fc.read_driver_location.return_value = SimpleNamespace(trip_active=False, trip_id="T1", lat=1.0, lng=2.0)
     assert service.run_once() == 0
+
+
+# ---------------------------------------------------------------- student trip status
+import datetime as dt
+
+from app.service import REFRESH_SECONDS, should_write_status
+
+NOW = dt.datetime(2026, 10, 14, 12, 0, tzinfo=dt.timezone.utc)
+
+
+@pytest.mark.parametrize("active,eta,updated,new_eta,expected", [
+    (None, None, None, 15, True),                                          # never written
+    (False, 15, NOW - dt.timedelta(seconds=10), 15, True),                 # trip had been marked ended
+    (True, 15, NOW - dt.timedelta(seconds=10), 14, True),                  # minutes changed
+    (True, 15, NOW - dt.timedelta(seconds=10), 15, False),                 # same minute, fresh: skip (saves quota)
+    (True, 15, NOW - dt.timedelta(seconds=REFRESH_SECONDS + 1), 15, True), # fresh enough no more: refresh
+])
+def test_should_write_status(active, eta, updated, new_eta, expected):
+    assert should_write_status(active, eta, updated, new_eta, NOW) is expected
+
+
+def test_status_is_written_for_each_student_on_the_first_reading(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", False)
+    fc = _setup(monkeypatch, 18, {})
+    service.run_once()
+    fc.update_trip_status.assert_called_once_with("a1", True, 18)
+
+
+def test_status_is_not_rewritten_when_unchanged_and_fresh(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", True)
+    fresh = dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=15)
+    fc = _setup(monkeypatch, 18, {"tripActive": True, "etaMinutes": 18, "statusUpdatedAt": fresh})
+    service.run_once()
+    fc.update_trip_status.assert_not_called()
+
+
+def test_status_keeps_updating_after_both_reminders_were_sent(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", True)
+    fc = _setup(monkeypatch, 4, {"alertFinalTripId": "T1", "tripActive": True, "etaMinutes": 9,
+                                 "statusUpdatedAt": dt.datetime.now(dt.timezone.utc)})
+    service.run_once()
+    fc.update_trip_status.assert_called_once_with("a1", True, 4)
+    fc.notify_student_bus.assert_not_called()  # no third reminder
+
+
+def test_statuses_are_cleared_once_when_the_trip_ends(monkeypatch):
+    monkeypatch.setattr(service, "_trip_was_active", True)
+    fc = _setup(monkeypatch, 5, {"tripActive": True, "etaMinutes": 6})
+    fc.read_driver_location.return_value = SimpleNamespace(trip_active=False, trip_id="T1", lat=1.0, lng=2.0)
+
+    service.run_once()
+    fc.update_trip_status.assert_called_once_with("a1", False, None)
+
+    fc.update_trip_status.reset_mock()
+    service.run_once()  # a later idle cycle does no more work
+    fc.update_trip_status.assert_not_called()
+    fc.fetch_active_assignments_with_stops.assert_called_once()
