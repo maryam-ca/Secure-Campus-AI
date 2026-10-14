@@ -28,6 +28,26 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Students module, part 4: bulk import of students from a CSV file (proposal: "Admin can upload student data")
+- **Where:** Admin > Students, the upload button next to the search box opens **Import students**.
+- **Flow (nothing is created until the Admin confirms):**
+  1. **Choose** a CSV file (file picker) or paste its text; **Copy template** gives the header and an example row (also `docs/students_import_template.csv`).
+  2. **Check:** the whole file is read first. Columns: `name, email, registration_number, program, semester, courses` (any order, common header names accepted; courses are IDs separated by `;` or `|`; empty program/semester default to BSE/1). Every problem is shown by line in plain words: empty name, invalid email, bad registration number, semester not 1-12, unknown course, a duplicate **inside the file**, or a registration number/email that **already exists** in the system. Bad rows are skipped; the Admin sees "N ready to import, M with problems".
+  3. **Import:** accounts are created one by one through the same server call as "Add Student" (random temporary password, student must choose their own at first sign-in). A row the server refuses is recorded and the rest continue; if the server cannot be reached the import **stops** and the remaining rows are marked "not attempted" instead of producing a wall of errors.
+  4. **Results:** created / not created with reasons, and **Copy accounts and passwords** (name, email, registration number, temporary password) so the Admin can hand them out; a warning says the passwords are shown only now.
+- **Real flaw found and fixed while testing:** the first version read the existing-students list without waiting for it or keeping it loaded, so duplicates of existing students were not caught at the check step (only the server would later refuse them). It now waits for the list. Also the "Check file" button is pinned at the bottom so it cannot scroll out of view.
+- **Files:** mobile/lib/core/utils/{student_csv,student_import}.dart, mobile/lib/features/admin/{admin_students_import_screen,admin_students_screen}.dart, mobile/pubspec.yaml (+ `file_picker` 13.1.0), docs/students_import_template.csv, mobile/test/{student_csv_test,student_import_test,admin_students_import_test}.dart
+- **Verified by:** `flutter test` **115/115** (22 new: CSV parsing incl. quotes/CRLF/BOM; each validation rule; the import runner's refuse-and-continue vs stop-when-unreachable; the screen end to end with a fake server: empty/invalid file, review with problem lines, only valid rows sent with the right fields and no password, partial failure, unreachable server, Back); `flutter analyze` 0 errors; debug APK built with the new plugin (206 MB).
+- **Not verified:** on the phone (it was disconnected, so the APK was built but not installed: run `.\install_app.bat`); the real file picker; a real import. **Importing needs the SecureCampus server reachable from the phone**: the app is built with `BACKEND_BASE_URL` pointing at `localhost`, so build with `--dart-define=BACKEND_BASE_URL=http://<PC-IP>:8000` and run `iris_ai` on the same Wi-Fi.
+
+### 2026-10-14 — Students module: summary of what changed today
+1. **Passwords:** no more registration-number passwords; random temporary password; forced first-login change; Change password in every portal; rules let a user clear only their own flag.
+2. **Student Home:** one-screen summary, bus status text with 20/10-minute wording and stale detection, unread-alerts badge, returned-books history.
+3. **Admin Students:** ID/name search and filters with counts, full student overview, working Reactivate.
+4. **Bulk CSV import.**
+- **Totals after this work:** `flutter test` 115, `iris_ai` 25, `bus_eta` 28, `overdue_checker` 10, Firestore rules 14: all passing.
+- **Owner must publish the updated `firebase/firestore.rules`** (first-login flag rule) for the password flow to clear its flag.
+
 ### 2026-10-14 — Students module, part 3: Admin student list filters, full student overview, working Reactivate
 - **Admin > Students list:**
   - Search now finds a student by any part of the name, program, email or **ID** (`007`, `bse-00`, `FA23BSE001`).

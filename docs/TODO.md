@@ -3,7 +3,7 @@
 Tick a box only when **verified** (test run, device check, saved file). Then add a line in [CHANGELOG.md](CHANGELOG.md) and update the row in [ISSUES.md](ISSUES.md).
 Sources: [PROJECT_STATUS.md](PROJECT_STATUS.md) · [PROPOSAL_TRACEABILITY.md](PROPOSAL_TRACEABILITY.md) · [ISSUES.md](ISSUES.md).
 Effort: S < 1 h · M half day · L 1–2 days · XL several days.
-Last updated: 2026-10-13. Part A: 18 / 46 done · Part B: 0 / 26 done.
+Last updated: 2026-10-13. Part A: 19 / 46 done · Part B: 0 / 26 done.
 
 ## The split (confirmed 2026-10-13)
 
@@ -75,7 +75,7 @@ Flutter
 - [ ] A3.1 (M) Driver: start/stop trip, GPS to RTDB only while a trip is active (real phone, location permission)
 - [ ] A3.2 (M) Admin: bus, stops, driver account, assign students to stops; live map shows the marker (OpenStreetMap, A1.11)
 - [ ] A3.3 (M) `bus_eta`: **two reminders per trip — 20 min ("get ready") and 10 min ("head to your stop")**, each once per student per trip. **Code + 19 unit tests done**; still to do: test with a real walk/drive and short thresholds **I-20**
-- [ ] A3.4 (M) Student portal: bus status **text only** (assigned bus/stop, trip running or not, ETA, and the 20/10-minute reminders in the Alerts list); no map, no live location **I-25**
+- [x] A3.4 (M) Student portal: bus status **text only** (assigned bus/stop, trip running or not, ETA, and the 20/10-minute reminders in the Alerts list); no map, no live location **I-25**
 - [ ] A3.5 (S) Rules test: student cannot read `driverLocation` or others' assignments
 - [ ] A3.6 (S) ETA method: keep the free straight-line estimate at 25 km/h (leave `MAP_API_KEY` empty); state this in the report. Optional free upgrade: OSRM public routing API
 

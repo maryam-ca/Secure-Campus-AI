@@ -11,13 +11,15 @@ import '../../models/student_model.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/admin_student_providers.dart';
 import 'admin_student_overview_screen.dart';
+import 'admin_students_import_screen.dart';
 import '../../services/backend_api_service.dart';
 
 class AdminStudentsScreen extends ConsumerStatefulWidget {
   const AdminStudentsScreen({super.key});
 
   @override
-  ConsumerState<AdminStudentsScreen> createState() => _AdminStudentsScreenState();
+  ConsumerState<AdminStudentsScreen> createState() =>
+      _AdminStudentsScreenState();
 }
 
 class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
@@ -41,41 +43,71 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() => _query = v),
-              decoration: InputDecoration(
-                hintText: 'Search name, ID (e.g. 007), program or email',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (v) => setState(() => _query = v),
+                    decoration: InputDecoration(
+                      hintText: 'Search name, ID (e.g. 007), program or email',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  tooltip: 'Import students from a CSV file',
+                  icon: const Icon(Icons.upload_file),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AdminStudentsImportScreen(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
             child: studentsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Could not load students.\n$err', textAlign: TextAlign.center)),
+              error: (err, _) => Center(
+                child: Text(
+                  'Could not load students.\n$err',
+                  textAlign: TextAlign.center,
+                ),
+              ),
               data: (allStudents) {
                 if (allStudents.isEmpty) {
-                  return const Center(child: Text('No students yet. Tap "Add Student" to create one.'));
+                  return const Center(
+                    child: Text(
+                      'No students yet. Tap "Add Student" to create one.',
+                    ),
+                  );
                 }
-                final students = filterStudents(allStudents, query: _query, iris: _iris, semester: _semester);
+                final students = filterStudents(
+                  allStudents,
+                  query: _query,
+                  iris: _iris,
+                  semester: _semester,
+                );
                 final counts = irisCounts(allStudents);
                 final semesters = semestersIn(allStudents);
 
                 Widget chip(String label, IrisFilter value) => ChoiceChip(
-                      label: Text(label),
-                      selected: _iris == value,
-                      onSelected: (_) => setState(() => _iris = value),
-                    );
+                  label: Text(label),
+                  selected: _iris == value,
+                  onSelected: (_) => setState(() => _iris = value),
+                );
 
                 return Column(
                   children: [
@@ -89,18 +121,35 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             chip('All (${counts.all})', IrisFilter.all),
-                            chip('Iris enrolled (${counts.enrolled})', IrisFilter.enrolled),
-                            chip('Not enrolled (${counts.notEnrolled})', IrisFilter.notEnrolled),
+                            chip(
+                              'Iris enrolled (${counts.enrolled})',
+                              IrisFilter.enrolled,
+                            ),
+                            chip(
+                              'Not enrolled (${counts.notEnrolled})',
+                              IrisFilter.notEnrolled,
+                            ),
                             PopupMenuButton<int?>(
                               tooltip: 'Filter by semester',
                               onSelected: (v) => setState(() => _semester = v),
                               itemBuilder: (_) => [
-                                const PopupMenuItem<int?>(value: null, child: Text('All semesters')),
-                                for (final sem in semesters) PopupMenuItem<int?>(value: sem, child: Text('Semester $sem')),
+                                const PopupMenuItem<int?>(
+                                  value: null,
+                                  child: Text('All semesters'),
+                                ),
+                                for (final sem in semesters)
+                                  PopupMenuItem<int?>(
+                                    value: sem,
+                                    child: Text('Semester $sem'),
+                                  ),
                               ],
                               child: Chip(
                                 avatar: const Icon(Icons.filter_list, size: 18),
-                                label: Text(_semester == null ? 'Semester' : 'Semester $_semester'),
+                                label: Text(
+                                  _semester == null
+                                      ? 'Semester'
+                                      : 'Semester $_semester',
+                                ),
                               ),
                             ),
                           ],
@@ -111,33 +160,65 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('${students.length} of ${allStudents.length} students',
-                            style: const TextStyle(color: AppColors.bodyText, fontSize: 12)),
+                        child: Text(
+                          '${students.length} of ${allStudents.length} students',
+                          style: const TextStyle(
+                            color: AppColors.bodyText,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                     Expanded(
                       child: students.isEmpty
-                          ? const Center(child: Text('No students match your search or filters.'))
+                          ? const Center(
+                              child: Text(
+                                'No students match your search or filters.',
+                              ),
+                            )
                           : ListView.separated(
                               padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
                               itemCount: students.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
                               itemBuilder: (context, i) {
                                 final s = students[i];
                                 return Card(
                                   child: ListTile(
                                     leading: CircleAvatar(
-                                      backgroundColor: AppColors.accentLightBlue,
-                                      child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
-                                          style: const TextStyle(color: AppColors.primaryBlueDark, fontWeight: FontWeight.w700)),
+                                      backgroundColor:
+                                          AppColors.accentLightBlue,
+                                      child: Text(
+                                        s.name.isNotEmpty
+                                            ? s.name[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          color: AppColors.primaryBlueDark,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
                                     ),
                                     title: Text(s.name),
-                                    subtitle: Text('${s.registrationNumber} · ${s.program}, Sem ${s.semester}'
-                                        '${s.irisEnrolled ? '' : '  ·  Iris NOT enrolled'}'),
+                                    subtitle: Text(
+                                      '${s.registrationNumber} · ${s.program}, Sem ${s.semester}'
+                                      '${s.irisEnrolled ? '' : '  ·  Iris NOT enrolled'}',
+                                    ),
                                     trailing: s.irisEnrolled
-                                        ? const Icon(Icons.verified_user_outlined, color: AppColors.success, size: 20)
-                                        : const Icon(Icons.warning_amber_outlined, color: AppColors.warning, size: 20),
-                                    onTap: () => _openStudentDetailSheet(context, ref, s),
+                                        ? const Icon(
+                                            Icons.verified_user_outlined,
+                                            color: AppColors.success,
+                                            size: 20,
+                                          )
+                                        : const Icon(
+                                            Icons.warning_amber_outlined,
+                                            color: AppColors.warning,
+                                            size: 20,
+                                          ),
+                                    onTap: () => _openStudentDetailSheet(
+                                      context,
+                                      ref,
+                                      s,
+                                    ),
                                   ),
                                 );
                               },
@@ -163,7 +244,11 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
     showDialog(context: context, builder: (_) => const _AddStudentDialog());
   }
 
-  void _openStudentDetailSheet(BuildContext context, WidgetRef ref, StudentModel student) {
+  void _openStudentDetailSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StudentModel student,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -207,38 +292,55 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
                 TextFormField(
                   controller: _name,
                   decoration: const InputDecoration(labelText: 'Full name'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _email,
                   decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Enter a valid email'
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _regNo,
-                  decoration: const InputDecoration(labelText: 'Registration number (e.g. FA23-BSE-011)'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Registration number (e.g. FA23-BSE-011)',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: TextFormField(controller: _program, decoration: const InputDecoration(labelText: 'Program')),
+                      child: TextFormField(
+                        controller: _program,
+                        decoration: const InputDecoration(labelText: 'Program'),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextFormField(
                         controller: _semester,
-                        decoration: const InputDecoration(labelText: 'Semester'),
+                        decoration: const InputDecoration(
+                          labelText: 'Semester',
+                        ),
                         keyboardType: TextInputType.number,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Align(alignment: Alignment.centerLeft, child: Text('Courses', style: Theme.of(context).textTheme.titleMedium)),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Courses',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 coursesAsync.when(
                   loading: () => const LinearProgressIndicator(),
@@ -247,13 +349,17 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
                     spacing: 6,
                     runSpacing: 4,
                     children: courses
-                        .map((c) => FilterChip(
-                              label: Text(c.name),
-                              selected: _selectedCourses.contains(c.id),
-                              onSelected: (sel) => setState(() {
-                                sel ? _selectedCourses.add(c.id) : _selectedCourses.remove(c.id);
-                              }),
-                            ))
+                        .map(
+                          (c) => FilterChip(
+                            label: Text(c.name),
+                            selected: _selectedCourses.contains(c.id),
+                            onSelected: (sel) => setState(() {
+                              sel
+                                  ? _selectedCourses.add(c.id)
+                                  : _selectedCourses.remove(c.id);
+                            }),
+                          ),
+                        )
                         .toList(),
                   ),
                 ),
@@ -267,11 +373,21 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : const Text('Create'),
         ),
       ],
@@ -286,7 +402,9 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
     });
 
     try {
-      final result = await ref.read(backendApiServiceProvider).createAccount(
+      final result = await ref
+          .read(backendApiServiceProvider)
+          .createAccount(
             email: _email.text.trim(),
             name: _name.text.trim(),
             role: 'student',
@@ -311,7 +429,10 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
     }
   }
 
-  void _showCredentialsDialog(BuildContext context, Map<String, dynamic> result) {
+  void _showCredentialsDialog(
+    BuildContext context,
+    Map<String, dynamic> result,
+  ) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -322,7 +443,12 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
           'their own password the first time they sign in. If they forget it, '
           'Admin can reset it from this screen.',
         ),
-        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
+        ],
       ),
     );
   }
@@ -343,7 +469,8 @@ class _StudentDetailSheet extends ConsumerStatefulWidget {
   const _StudentDetailSheet({required this.student});
 
   @override
-  ConsumerState<_StudentDetailSheet> createState() => _StudentDetailSheetState();
+  ConsumerState<_StudentDetailSheet> createState() =>
+      _StudentDetailSheetState();
 }
 
 class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
@@ -352,7 +479,10 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
 
   Future<void> _enrollIris() async {
     final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 90);
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 90,
+    );
     if (picked == null) return;
 
     setState(() {
@@ -360,13 +490,17 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
       _message = null;
     });
     try {
-      final result = await ref.read(backendApiServiceProvider).enrollIris(
+      final result = await ref
+          .read(backendApiServiceProvider)
+          .enrollIris(
             studentId: widget.student.uid,
             imageFile: File(picked.path),
           );
-      setState(() => _message = result['success'] == true
-          ? 'Iris enrolled successfully.'
-          : 'Enrollment did not succeed: ${result['reason']}');
+      setState(
+        () => _message = result['success'] == true
+            ? 'Iris enrolled successfully.'
+            : 'Enrollment did not succeed: ${result['reason']}',
+      );
     } on BackendApiException catch (e) {
       setState(() => _message = e.message);
     } finally {
@@ -379,7 +513,8 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
       final confirmed = await showConfirmDialog(
         context,
         title: 'Deactivate this student?',
-        message: '${widget.student.name} will lose access to SecureCampus immediately. '
+        message:
+            '${widget.student.name} will lose access to SecureCampus immediately. '
             'You can reactivate them later from this same screen.',
         confirmLabel: 'Deactivate',
       );
@@ -387,8 +522,13 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(adminRepositoryProvider).setAccountActive(widget.student.uid, active);
-      setState(() => _message = active ? 'Account reactivated.' : 'Account deactivated.');
+      await ref
+          .read(adminRepositoryProvider)
+          .setAccountActive(widget.student.uid, active);
+      setState(
+        () =>
+            _message = active ? 'Account reactivated.' : 'Account deactivated.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -400,7 +540,9 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
     final isActive = ref.watch(studentAccountActiveProvider(s.uid)).valueOrNull;
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
@@ -408,7 +550,10 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(s.name, style: Theme.of(context).textTheme.titleLarge),
-          Text('${s.registrationNumber} · ${s.email}', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            '${s.registrationNumber} · ${s.email}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 16,
@@ -418,26 +563,47 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    s.irisEnrolled ? Icons.verified_user_outlined : Icons.warning_amber_outlined,
-                    color: s.irisEnrolled ? AppColors.success : AppColors.warning,
+                    s.irisEnrolled
+                        ? Icons.verified_user_outlined
+                        : Icons.warning_amber_outlined,
+                    color: s.irisEnrolled
+                        ? AppColors.success
+                        : AppColors.warning,
                     size: 18,
                   ),
                   const SizedBox(width: 6),
-                  Flexible(child: Text(s.irisEnrolled ? 'Iris enrolled' : 'Iris not yet enrolled', overflow: TextOverflow.ellipsis)),
+                  Flexible(
+                    child: Text(
+                      s.irisEnrolled
+                          ? 'Iris enrolled'
+                          : 'Iris not yet enrolled',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isActive == false ? Icons.block : Icons.check_circle_outline,
-                    color: isActive == false ? AppColors.error : AppColors.success,
+                    isActive == false
+                        ? Icons.block
+                        : Icons.check_circle_outline,
+                    color: isActive == false
+                        ? AppColors.error
+                        : AppColors.success,
                     size: 18,
                   ),
                   const SizedBox(width: 6),
                   Flexible(
-                    child: Text(isActive == null ? 'Account ...' : (isActive ? 'Account active' : 'Account deactivated'),
-                        overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      isActive == null
+                          ? 'Account ...'
+                          : (isActive
+                                ? 'Account active'
+                                : 'Account deactivated'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -445,7 +611,10 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
           ),
           const SizedBox(height: 16),
           if (_message != null) ...[
-            Text(_message!, style: const TextStyle(color: AppColors.primaryBlueDark)),
+            Text(
+              _message!,
+              style: const TextStyle(color: AppColors.primaryBlueDark),
+            ),
             const SizedBox(height: 12),
           ],
           Wrap(
@@ -457,7 +626,11 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                     ? null
                     : () {
                         Navigator.of(context).pop();
-                        showDialog(context: context, builder: (_) => _EditStudentDialog(student: widget.student));
+                        showDialog(
+                          context: context,
+                          builder: (_) =>
+                              _EditStudentDialog(student: widget.student),
+                        );
                       },
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit'),
@@ -470,20 +643,32 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
               if (isActive == false)
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _toggleActive(true),
-                  icon: const Icon(Icons.check_circle_outline, color: AppColors.success),
-                  label: const Text('Reactivate', style: TextStyle(color: AppColors.success)),
+                  icon: const Icon(
+                    Icons.check_circle_outline,
+                    color: AppColors.success,
+                  ),
+                  label: const Text(
+                    'Reactivate',
+                    style: TextStyle(color: AppColors.success),
+                  ),
                 )
               else
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _toggleActive(false),
                   icon: const Icon(Icons.block, color: AppColors.error),
-                  label: const Text('Deactivate', style: TextStyle(color: AppColors.error)),
+                  label: const Text(
+                    'Deactivate',
+                    style: TextStyle(color: AppColors.error),
+                  ),
                 ),
               FilledButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => AdminStudentOverviewScreen(student: widget.student)),
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          AdminStudentOverviewScreen(student: widget.student),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.person_search_outlined),
@@ -491,7 +676,10 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
               ),
             ],
           ),
-          if (_busy) ...[const SizedBox(height: 12), const LinearProgressIndicator()],
+          if (_busy) ...[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(),
+          ],
         ],
       ),
     );
@@ -536,7 +724,9 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
       final newPassword = _newPassword.text.trim();
 
       if (nameChanged || newPassword.isNotEmpty) {
-        await ref.read(backendApiServiceProvider).updateAccount(
+        await ref
+            .read(backendApiServiceProvider)
+            .updateAccount(
               uid: widget.student.uid,
               role: 'student',
               name: nameChanged ? _name.text.trim() : null,
@@ -544,7 +734,9 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
             );
       }
 
-      await ref.read(adminRepositoryProvider).updateStudent(
+      await ref
+          .read(adminRepositoryProvider)
+          .updateStudent(
             widget.student.uid,
             program: _program.text.trim(),
             semester: int.tryParse(_semester.text.trim()),
@@ -562,7 +754,12 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
               'New password for ${widget.student.email}: $newPassword\n\n'
               'Share this with the student securely.',
             ),
-            actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
+            ],
           ),
         );
       } else {
@@ -590,11 +787,19 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(controller: _name, decoration: const InputDecoration(labelText: 'Full name')),
+              TextField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: 'Full name'),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: TextField(controller: _program, decoration: const InputDecoration(labelText: 'Program'))),
+                  Expanded(
+                    child: TextField(
+                      controller: _program,
+                      decoration: const InputDecoration(labelText: 'Program'),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
@@ -606,7 +811,13 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
                 ],
               ),
               const SizedBox(height: 14),
-              Align(alignment: Alignment.centerLeft, child: Text('Courses', style: Theme.of(context).textTheme.titleMedium)),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Courses',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
               const SizedBox(height: 6),
               coursesAsync.when(
                 loading: () => const LinearProgressIndicator(),
@@ -615,13 +826,17 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
                   spacing: 6,
                   runSpacing: 4,
                   children: courses
-                      .map((c) => FilterChip(
-                            label: Text(c.name),
-                            selected: _selectedCourses.contains(c.id),
-                            onSelected: (sel) => setState(() {
-                              sel ? _selectedCourses.add(c.id) : _selectedCourses.remove(c.id);
-                            }),
-                          ))
+                      .map(
+                        (c) => FilterChip(
+                          label: Text(c.name),
+                          selected: _selectedCourses.contains(c.id),
+                          onSelected: (sel) => setState(() {
+                            sel
+                                ? _selectedCourses.add(c.id)
+                                : _selectedCourses.remove(c.id);
+                          }),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -642,11 +857,21 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : const Text('Save'),
         ),
       ],
