@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Login screen: "Demo accounts" list, tap to sign in (testing aid)
+- **Type:** feature (testing)
+- **Areas:** mobile, scripts
+- **What changed:** The login screen shows a **Demo accounts** button (debug builds only). It opens a list of every seeded account grouped by role (admin, librarian, security, driver, students); tapping one signs in. The accounts are NOT in source code: `scripts/make_demo_defines.py` converts `CREDENTIALS.md` into `mobile/demo_accounts.json` (git-ignored), which is passed at build time with `--dart-define-from-file`. A normal build, or any release build, shows no button and contains no accounts.
+- **Build command:** `python scripts/make_demo_defines.py` then in `mobile/`: `flutter build apk --debug --dart-define-from-file=demo_accounts.json`
+- **Files:** scripts/make_demo_defines.py, mobile/lib/config/demo_accounts.dart, mobile/lib/features/auth/{login_screen,demo_accounts_sheet}.dart, mobile/test/demo_accounts_test.dart, .gitignore
+- **Verified by:** `flutter test` 15/15 (parsing, no button when empty, tapping a demo account calls sign-in with its email and password); `flutter analyze` 0 errors; script parsed 14 accounts (1 admin, 10 students, librarian, security, driver); debug APK built with the file.
+- **Not verified:** on the phone (install blocked by a signature mismatch with the copy already installed; needs an uninstall).
+- **Notes:** Remove the demo build before showing the app to anyone outside the team: anyone holding that APK can read the passwords from it. Passwords are the seeded ones in CREDENTIALS.md; rotating them (A1.7) means re-running the script and rebuilding.
+
 ### 2026-10-14 — Admin dashboard cards are tappable
 - **Type:** feature (UX)
 - **Areas:** mobile

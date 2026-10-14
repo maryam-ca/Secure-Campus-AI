@@ -40,3 +40,6 @@ mobile/build/
 *.apk
 studnet*.jpeg
 .vscode/
+
+# Demo logins for debug builds (contains passwords)
+mobile/demo_accounts.json
