@@ -371,18 +371,19 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
     }
   }
 
-  /// Runs on every keystroke: the last 3+ characters of the registration
-  /// number are enough. One match is selected automatically; several
-  /// (e.g. the same number in two intakes) are listed to pick from.
+  /// Runs on every keystroke. Typing 2+ characters lists every student whose
+  /// registration number OR name contains them ("00", "007", "ayesh"). The
+  /// librarian checks the name and complete ID and taps the right student;
+  /// nothing is selected automatically, and editing the text clears any
+  /// earlier selection.
   void _onQueryChanged(String text) {
     final q = text.trim();
-    final matches = searchStudentsByRegNo(_allStudents, q);
+    final matches = searchStudents(_allStudents, q);
+    final searched = q.length >= studentSearchMinChars;
     setState(() {
       _matches = matches;
-      _foundStudent = matches.length == 1 ? matches.first : null;
-      _error = (q.isNotEmpty && normalizeRegNo(q).length >= studentSearchMinChars && matches.isEmpty && !_searching)
-          ? 'No student found ending in "$q".'
-          : null;
+      _foundStudent = null;
+      _error = (searched && matches.isEmpty && !_searching) ? 'No student found matching "$q".' : null;
     });
   }
 
@@ -521,24 +522,30 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
           const SizedBox(height: 20),
           TextField(
             controller: _regNoController,
-            textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
-              labelText: 'Student registration number',
-              helperText: 'Type the last 3 digits (e.g. 007) to find the student',
+              labelText: 'Student ID or name',
+              helperText: 'Type part of the ID (e.g. 00) or the name (e.g. ayesh), then tap the student',
+              helperMaxLines: 2,
               prefixIcon: Icon(Icons.badge_outlined),
               suffixIcon: Icon(Icons.search),
             ),
             onChanged: _onQueryChanged,
           ),
           if (_searching) const Padding(padding: EdgeInsets.only(top: 10), child: LinearProgressIndicator()),
-          if (_foundStudent == null && _matches.length > 1)
+          if (_foundStudent == null && _matches.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: Text(
+                '${_matches.length} student${_matches.length == 1 ? '' : 's'} found - check the name and ID, then tap one',
+                style: const TextStyle(color: AppColors.bodyText, fontSize: 12.5),
+              ),
+            ),
             Container(
-              margin: const EdgeInsets.only(top: 8),
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.divider),
                 borderRadius: BorderRadius.circular(10),
               ),
-              constraints: const BoxConstraints(maxHeight: 180),
+              constraints: const BoxConstraints(maxHeight: 220),
               child: ListView(
                 shrinkWrap: true,
                 children: [
@@ -546,13 +553,14 @@ class _BookIssueSheetState extends ConsumerState<_BookIssueSheet> {
                     ListTile(
                       dense: true,
                       leading: const Icon(Icons.person_outline),
-                      title: Text(s.name),
+                      title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text('${s.registrationNumber} · ${s.program}, Sem ${s.semester}'),
                       onTap: () => _pickStudent(s),
                     ),
                 ],
               ),
             ),
+          ],
           if (_foundStudent != null)
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
