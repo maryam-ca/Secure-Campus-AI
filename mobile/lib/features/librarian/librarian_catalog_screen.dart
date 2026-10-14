@@ -37,8 +37,9 @@ class _LibrarianCatalogScreenState extends ConsumerState<LibrarianCatalogScreen>
   Color _colorFor(CatalogFilter f) {
     switch (f) {
       case CatalogFilter.overdue:
-      case CatalogFilter.locked:
         return AppColors.error;
+      case CatalogFilter.locked:
+        return AppColors.locked;
       case CatalogFilter.issued:
         return AppColors.warning;
       case CatalogFilter.available:
@@ -230,7 +231,7 @@ class _BookCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
-          border: locked ? Border.all(color: AppColors.error.withValues(alpha: 0.35)) : null,
+          border: locked ? Border.all(color: AppColors.locked.withValues(alpha: 0.35)) : null,
           boxShadow: [
             BoxShadow(color: AppColors.navyText.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 5)),
           ],
@@ -243,12 +244,12 @@ class _BookCard extends ConsumerWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: locked ? AppColors.error.withValues(alpha: 0.12) : AppColors.accentLightBlue,
+                color: locked ? AppColors.locked.withValues(alpha: 0.12) : AppColors.accentLightBlue,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 locked ? Icons.lock_outline : Icons.menu_book_outlined,
-                color: locked ? AppColors.error : AppColors.primaryBlueDark,
+                color: locked ? AppColors.locked : AppColors.primaryBlueDark,
                 size: 22,
               ),
             ),
@@ -267,7 +268,7 @@ class _BookCard extends ConsumerWidget {
                   if (locked) ...[
                     const SizedBox(height: 6),
                     Text('Reason: ${book.lockReason.isEmpty ? '-' : book.lockReason}',
-                        style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(color: AppColors.locked, fontSize: 12, fontWeight: FontWeight.w600)),
                     Text(
                       'Locked by ${book.lockedByName.isEmpty ? 'unknown' : book.lockedByName}'
                       '${book.lockedAt == null ? '' : ' · ${DateFormat('dd MMM yyyy').format(book.lockedAt!.toLocal())}'}',

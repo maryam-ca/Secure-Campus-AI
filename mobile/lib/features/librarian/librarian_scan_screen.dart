@@ -786,10 +786,10 @@ class _BookLockedSheet extends ConsumerWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.lock, color: AppColors.error, size: 18),
+              Icon(Icons.lock, color: AppColors.locked, size: 18),
               SizedBox(width: 6),
               Text('This book is LOCKED - it cannot be issued',
-                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w800)),
+                  style: TextStyle(color: AppColors.locked, fontWeight: FontWeight.w800)),
             ],
           ),
           const SizedBox(height: 10),

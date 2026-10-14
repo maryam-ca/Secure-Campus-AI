@@ -18,7 +18,7 @@ class IssueReportsScreen extends ConsumerWidget {
 
     return reportsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Could not load reports.\n$err')),
+      error: (err, _) => _ReportsError(error: err, onRetry: () => ref.invalidate(issueReportsProvider)),
       data: (reports) {
         if (reports.isEmpty) {
           return const Center(child: Text('No unauthorized-issue reports.'));
@@ -89,6 +89,50 @@ class _ReportCard extends ConsumerWidget {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Plain-language error for the reports list. A permission error usually means
+/// the database rules for reports have not been published yet, which only the
+/// project owner can fix, so say that instead of showing raw exception text.
+class _ReportsError extends StatelessWidget {
+  final Object error;
+  final VoidCallback onRetry;
+  const _ReportsError({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final denied = error.toString().contains('permission-denied');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(denied ? Icons.lock_outline : Icons.cloud_off_outlined, size: 34, color: AppColors.bodyText),
+            const SizedBox(height: 10),
+            Text(
+              denied
+                  ? 'Student reports are not available yet.'
+                  : 'Could not load reports. Check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            if (denied) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'The database rules for reports have not been published to Firebase. '
+                'Ask the administrator to publish them, then tap Retry.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.bodyText, fontSize: 12.5),
+              ),
+            ],
+            const SizedBox(height: 12),
+            OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('Retry')),
           ],
         ),
       ),

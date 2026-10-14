@@ -18,7 +18,7 @@ class BookStateBadge extends StatelessWidget {
     final (label, color, icon) = switch (bookState(book)) {
       BookState.available => ('AVAILABLE', AppColors.success, Icons.check_circle),
       BookState.issued => ('ISSUED', AppColors.warning, Icons.person),
-      BookState.locked => ('LOCKED', AppColors.error, Icons.lock),
+      BookState.locked => ('LOCKED', AppColors.locked, Icons.lock),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -60,7 +60,7 @@ Future<void> showLockBookDialog(BuildContext context, WidgetRef ref, BookModel b
   } on BookLockException catch (e) {
     if (context.mounted) _snack(context, e.message);
   } catch (e) {
-    if (context.mounted) _snack(context, 'Could not lock the book: $e');
+    if (context.mounted) _snack(context, _friendly('lock', e));
   }
 }
 
@@ -85,7 +85,7 @@ Future<void> showUnlockBookDialog(BuildContext context, WidgetRef ref, BookModel
   } on BookLockException catch (e) {
     if (context.mounted) _snack(context, e.message);
   } catch (e) {
-    if (context.mounted) _snack(context, 'Could not unlock the book: $e');
+    if (context.mounted) _snack(context, _friendly('unlock', e));
   }
 }
 
@@ -97,6 +97,16 @@ Future<void> showLockHistorySheet(BuildContext context, BookModel book) {
     showDragHandle: true,
     builder: (_) => _LockHistorySheet(book: book),
   );
+}
+
+/// Plain-language message for a failed lock/unlock. A permission error means the
+/// Firestore rules that allow lock history are not published in the project yet.
+String _friendly(String action, Object e) {
+  if (e.toString().contains('permission-denied')) {
+    return 'Could not $action the book: Firebase refused the change (permission denied). '
+        'The database rules for locking have not been published yet. Ask the administrator to publish them.';
+  }
+  return 'Could not $action the book: $e';
 }
 
 void _snack(BuildContext context, String message) {
@@ -215,7 +225,7 @@ class _LockHistorySheet extends ConsumerWidget {
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, i) {
                       final e = events[i];
-                      final color = e.isLock ? AppColors.error : AppColors.success;
+                      final color = e.isLock ? AppColors.locked : AppColors.success;
                       return ListTile(
                         leading: Icon(e.isLock ? Icons.lock : Icons.lock_open, color: color),
                         title: Text('${e.isLock ? 'Locked' : 'Unlocked'} by ${e.byName.isEmpty ? e.byUid : e.byName}'

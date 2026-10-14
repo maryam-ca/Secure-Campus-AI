@@ -17,6 +17,8 @@ class AppColors {
   static const Color success = Color(0xFF2E7D32);
   static const Color warning = Color(0xFFEF6C00);
   static const Color error = Color(0xFFC62828);
+  // Locked books: purple, so they are not confused with overdue (red) or issued (orange).
+  static const Color locked = Color(0xFF6A1B9A);
 }
 
 class AppTheme {
