@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../constants/roles.dart';
@@ -45,6 +46,11 @@ class PortalScaffold extends ConsumerWidget {
                 ),
               ),
             ),
+          ),
+          IconButton(
+            tooltip: 'Change password',
+            icon: const Icon(Icons.lock_reset),
+            onPressed: () => GoRouter.of(context).push('/change-password'),
           ),
           IconButton(
             tooltip: 'Sign out',

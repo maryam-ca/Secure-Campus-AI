@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../providers/admin_navigation_provider.dart';
@@ -83,6 +84,17 @@ class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
         for (final s in _sections)
           NavigationDrawerDestination(icon: Icon(s.icon), label: Text(s.label)),
         const Divider(height: 24, indent: 16, endIndent: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ListTile(
+            leading: const Icon(Icons.lock_reset),
+            title: const Text('Change password'),
+            onTap: () {
+              if (!isWide) Navigator.of(context).pop();
+              GoRouter.of(context).push('/change-password');
+            },
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ListTile(

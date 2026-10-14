@@ -29,6 +29,35 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Changes the signed-in user's own password. Firebase requires a recent
+  /// sign-in for this, so the current password is checked first.
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) throw const AuthFailure('You are not signed in.');
+
+    try {
+      await user.reauthenticateWithCredential(EmailAuthProvider.credential(email: email, password: currentPassword));
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          throw const AuthFailure('The current password is not correct.');
+        case 'weak-password':
+          throw const AuthFailure('That password is too weak. Choose a longer one.');
+        case 'too-many-requests':
+          throw const AuthFailure('Too many attempts. Please wait a moment and try again.');
+        case 'network-request-failed':
+          throw const AuthFailure('Network error. Check your connection and try again.');
+        case 'requires-recent-login':
+          throw const AuthFailure('Please sign out, sign in again, and then change your password.');
+        default:
+          throw AuthFailure('Could not change the password (${e.code}).');
+      }
+    }
+  }
+
   /// Used only by the public "report a found card" flow (spec §23) so
   /// a non-account-holding finder can submit one Firestore write
   /// without needing a real SecureCampus account. See

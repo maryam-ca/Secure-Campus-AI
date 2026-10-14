@@ -308,7 +308,10 @@ def create_account(email: str, name: str, role: str,
             raise ValueError("registrationNumber is required for role='student'")
         _reserve_registration_number(reg_no)
 
-    chosen_password = password or (reg_no if role == "student" else None) or secrets.token_urlsafe(9)
+    # Never default to something guessable (it used to be the registration number).
+    # Every account gets a random temporary password unless the caller supplies one;
+    # the account is flagged mustResetPassword so the user has to replace it at first login.
+    chosen_password = password or secrets.token_urlsafe(9)
     if len(chosen_password) < 6:
         if reg_no:
             db().collection("registrationNumbers").document(reg_no).delete()

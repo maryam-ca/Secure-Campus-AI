@@ -10,6 +10,11 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
 final userRepositoryProvider = Provider<UserRepository>((ref) => UserRepository());
 
+/// True once the user has changed their password in this session. Stops the
+/// forced screen coming back right after a successful change even if clearing
+/// the flag in Firestore was refused (e.g. rules not published yet).
+final passwordChangedThisSessionProvider = StateProvider<bool>((ref) => false);
+
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) => PushNotificationService());
 
 /// Raw Firebase Auth state - fires whenever sign-in/sign-out happens.

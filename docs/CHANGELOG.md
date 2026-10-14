@@ -28,6 +28,21 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Students module, part 1: no guessable passwords; forced first-login password change; Change password
+- **Problem:** when an admin created a student the password was their **registration number** (the backend default, and the Admin app also sent it explicitly). The backend flagged `mustResetPassword`, but the app never read it, and nobody could change their own password.
+- **Backend:** `create_account` now always generates a random temporary password (no registration-number default). Admin dialog text now says "Temporary password" and that the student will choose their own at first login; the app no longer sends a password.
+- **App:**
+  - **First login:** an account flagged `mustResetPassword` is sent to a "Choose your password" screen from anywhere and cannot leave it (no back; Sign out only). Rules: at least 8 characters with a letter and a number, different from the temporary one, and not the registration number or the email name.
+  - **Voluntary:** a "Change password" button in the app bar of every portal (Student, Librarian, Security, Driver) and in the Admin drawer; asks for the current password first.
+  - Debug builds that carry the demo-accounts list do **not** force the change (so the one-tap demo logins keep working); release builds always do.
+  - After a successful change the flag is cleared in Firestore; if that is refused, the screen still will not return this session.
+- **Firestore rules:** a user may now clear **only their own** `mustResetPassword` flag, and only to `false`; role/active/anyone else's account remain admin-only.
+- **Files:** iris_ai/app/firebase_client.py, iris_ai/tests/test_account_password.py, firebase/firestore.rules, firebase/rules-tests/firestore.rules.test.mjs, mobile/lib/{core/utils/password_policy,core/router/{password_gate,role_paths,app_router},core/widgets/portal_scaffold,features/auth/change_password_screen,features/admin/{admin_home_shell,admin_students_screen},services/auth_service,repositories/user_repository,providers/auth_provider}.dart, mobile/test/password_test.dart
+- **Verified by:** `iris_ai` pytest 25/25 (4 new: random password not the registration number, different each time, flagged to change, explicit password still honoured/too-short refused); `flutter test` 66/66 (13 new: password rules, the redirect rule, the screen in first-login and voluntary modes, weak password never sent, good password sent with the right values, wrong-password message); rules emulator **14/14** (3 new, incl. a user cannot change role/active/another user, cannot set the flag to true). `flutter analyze` 0 errors. A test caught a real bug (the screen read the user only once, before it loaded) and it was fixed.
+- **Needs from the project owner:** **publish the updated `firebase/firestore.rules`** (the new users rule). Until then the flag cannot be cleared after a change (the session guard stops looping; the screen returns at the next sign-in).
+- **Not verified on the phone / real Firebase:** the real password change (needs a non-demo build and an account with the flag set).
+- **Note:** existing seeded accounts still carry `mustResetPassword = true`, so a release build will ask each of them to choose a password at first sign-in.
+
 ### 2026-10-14 — Admin dashboard simplified to one screen; plain header card with the real app logo
 - **Feedback:** the dashboard was too crowded and scrolled; remove duplicated or unnecessary data; remove the blue header card and show the proper app logo.
 - **Removed (duplicates / clutter):** the Quick actions row (repeated the side menu), the section headings (Campus today / Library / Transport), the separate Unknown Alerts, Issued Books, Overdue Books and Locked Books cards (the same numbers already appear in "Needs attention", and issued/locked are now a single note on the Library card).

@@ -136,3 +136,24 @@ test('staff read reports and change only the status; students cannot edit or rea
   await assertFails(updateDoc(doc(as('lib1'), ref.path), { note: 'rewritten' }));
   await assertFails(updateDoc(doc(as('stu1'), ref.path), { status: 'RESOLVED' }));
 });
+
+// ---------------------------------------------------------------- first-login password flag
+test('a user can clear their own must-change-password flag, only to false', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'stu1'), { uid: 'stu1', role: 'student', active: true, mustResetPassword: true });
+  });
+  await assertSucceeds(updateDoc(doc(as('stu1'), 'users/stu1'), { mustResetPassword: false }));
+  await assertFails(updateDoc(doc(as('stu1'), 'users/stu1'), { mustResetPassword: true }));
+});
+
+test('a user cannot use that rule to change their role, active flag, or anyone else', async () => {
+  await assertFails(updateDoc(doc(as('stu1'), 'users/stu1'), { role: 'admin' }));
+  await assertFails(updateDoc(doc(as('stu1'), 'users/stu1'), { active: false }));
+  await assertFails(updateDoc(doc(as('stu1'), 'users/stu1'), { mustResetPassword: false, role: 'admin' }));
+  await assertFails(updateDoc(doc(as('stu1'), 'users/stu2'), { mustResetPassword: false }));
+});
+
+test('fcmToken updates still work for the user and admin can still edit users', async () => {
+  await assertSucceeds(updateDoc(doc(as('stu1'), 'users/stu1'), { fcmToken: 'abc' }));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'users/stu1'), { active: false }));
+});

@@ -46,9 +46,14 @@ service cloud.firestore {
     // ---------------------------------------------------------------
     match /users/{uid} {
       allow read: if isAdmin() || request.auth.uid == uid;
+      // A user may change only their own fcmToken, or clear their own
+      // mustResetPassword flag (set it to false, never true) after choosing a
+      // new password. Nothing else - in particular not role or active.
       allow update: if isAdmin()
                     || (request.auth.uid == uid
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']));
+                        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken'])
+                            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustResetPassword'])
+                                && request.resource.data.mustResetPassword == false)));
       allow create, delete: if isAdmin();
     }
 
