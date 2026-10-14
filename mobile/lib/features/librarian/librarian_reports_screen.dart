@@ -28,13 +28,13 @@ class LibrarianReportsScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
           child: Row(
             children: [
-              _Tile(label: 'Issued now', value: loans.length, color: AppColors.warning, icon: Icons.assignment_outlined),
+              _Tile(label: 'Issued now', value: loans.length, color: AppColors.primaryBlue, icon: Icons.assignment_outlined),
               _Tile(label: 'Overdue', value: counts.overdue, color: AppColors.error, icon: Icons.watch_later_outlined),
-              _Tile(label: 'Locked', value: counts.locked, color: AppColors.error, icon: Icons.lock_outline),
+              _Tile(label: 'Locked', value: counts.locked, color: AppColors.locked, icon: Icons.lock_outline),
               _Tile(
                   label: 'New reports',
                   value: newReports,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.warning,
                   icon: Icons.report_gmailerrorred_outlined),
             ],
           ),

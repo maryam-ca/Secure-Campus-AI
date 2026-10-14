@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:securecampus/features/common/issue_reports_screen.dart';
 import 'package:securecampus/features/librarian/librarian_catalog_screen.dart';
 import 'package:securecampus/features/librarian/librarian_reports_screen.dart';
 import 'package:securecampus/models/admin_models.dart';
@@ -45,5 +46,29 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Algorithms'), findsOneWidget);
+  });
+
+  testWidgets('a denied reports query shows a plain message and a Retry button, not raw text', (tester) async {
+    await tester.pumpWidget(_app(const IssueReportsScreen(), [
+      issueReportsProvider.overrideWith((ref) => Stream.error(_denied)),
+    ]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Student reports are not available yet.'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.textContaining('cloud_firestore'), findsNothing);
+  });
+
+  testWidgets('any other reports error says to check the connection', (tester) async {
+    await tester.pumpWidget(_app(const IssueReportsScreen(), [
+      issueReportsProvider.overrideWith((ref) => Stream.error(Exception('socket closed'))),
+    ]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('Check your connection'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
   });
 }

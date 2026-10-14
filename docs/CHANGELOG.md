@@ -28,6 +28,18 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Locking / reports still denied: live rules confirmed OLD; clearer errors and colours
+- **Reported:** locking a book still gives a permission error; Reports tab shows "could not load reports" under "Student reports", with the summary showing Issued 3, Overdue 0, Locked 0, New reports 0; tile colours need fixing.
+- **Diagnosis (definitive):** a read-only check of the LIVE project (`campus-a4087`), signing in as the demo librarian exactly like the app: `books` and `libraryIssues` return 200, but `issueReports` and `books/BOOK-001/lockHistory` return **403 PERMISSION_DENIED**. The librarian's profile is correct (role `librarian`, active). So the app is fine and the published Firestore rules are still the old ones; the new rules (`firebase/firestore.rules`) are **not published**. They cannot be deployed from this PC: the Firebase CLI account `codecortexpk@gmail.com` gets 403 on project `campus-a4087` (no permission). The phone's log agrees (the `issueReports` listener kept failing with PERMISSION_DENIED).
+- **Needed from the project owner:** Firebase console, project `campus-a4087` -> Firestore Database -> Rules -> replace everything with `firebase/firestore.rules` -> Publish. Then run `python scripts/check_live_rules.py` (new, read-only, prints 200/403 per rule).
+- **Changed in the app:**
+  - Reports list error is now plain language with a Retry button: "Student reports are not available yet. The database rules for reports have not been published..." for permission errors, "Could not load reports. Check your connection and try again." otherwise (no raw exception text).
+  - Lock/unlock failures with permission denied now say the lock rules are not published and to ask the administrator, instead of the raw error.
+  - Colours: Locked is now its own purple (`AppColors.locked`), no longer the same red as Overdue. Reports tiles are Issued now = blue, Overdue = red, Locked = purple, New reports = orange. The Locked sub-tab, locked cards, LOCKED badge, lock history icons and the locked-book sheet use the purple.
+- **Files:** mobile/lib/core/theme/app_theme.dart, features/common/issue_reports_screen.dart, features/library/book_lock_ui.dart, features/librarian/{librarian_catalog_screen,librarian_reports_screen,librarian_scan_screen}.dart, mobile/test/librarian_error_resilience_test.dart, scripts/check_live_rules.py
+- **Verified by:** `flutter test` 42/42 (2 new: denied reports show the plain message + Retry and no raw text; other errors say check the connection); `flutter analyze` 0 errors; APK built and installed on the SM-A305F; `scripts/check_live_rules.py` run against the live project -> exit 2 (new rules NOT published).
+- **Not verified:** the new screens and colours on the phone; locking itself (blocked until the rules are published).
+
 ### 2026-10-14 — Fix: scanner camera no longer keeps running behind the book sheet
 - **Type:** fix (battery / behaviour)
 - **Areas:** mobile (librarian Home scan)
