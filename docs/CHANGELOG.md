@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Admin dashboard simplified to one screen; plain header card with the real app logo
+- **Feedback:** the dashboard was too crowded and scrolled; remove duplicated or unnecessary data; remove the blue header card and show the proper app logo.
+- **Removed (duplicates / clutter):** the Quick actions row (repeated the side menu), the section headings (Campus today / Library / Transport), the separate Unknown Alerts, Issued Books, Overdue Books and Locked Books cards (the same numbers already appear in "Needs attention", and issued/locked are now a single note on the Library card).
+- **Now:** a header card (white, no blue) with the **real SecureCampus shield logo** (the same mark as the login screen, drawn still), the "SecureCampus" name, the greeting with the admin's name and today's date; a **Needs attention** list only when something needs action (open alerts, overdue books, new student reports; otherwise a green All clear); five cards: Total Students, Attendance (today), Gate Entries (today), Library Books (with "N issued · N locked"), and Bus Status. Everything is tappable. Labels shortened so none are cut off ("Today's Attenda..." is now "Attendance" with "today" underneath).
+- **Fits one screen:** a test at phone size (360 x 740) checks the page needs no scrolling even in the worst case (three attention rows) and ends above the bottom of the real page area. On the SM-A305F the earlier version already left about a third of the screen empty; the cards were made roomier to use the space.
+- **Logo widget:** `AnimatedShieldLogo` gained `animate` (default true, so login and library screens are unchanged); the dashboard passes `animate: false` so a data screen has no moving logo.
+- **Files:** mobile/lib/features/admin/admin_dashboard_screen.dart, mobile/lib/core/widgets/animated_shield_logo.dart, mobile/test/admin_dashboard_test.dart
+- **Verified by:** `flutter test` 53/53 (includes: the shield logo and "SecureCampus" present; the removed items absent; no scrolling needed; all cards and attention rows navigate); `flutter analyze` 0 errors. A phone screenshot of the previous simplified layout showed it fits with space to spare and no overflow.
+- **Not verified on the phone:** the final version (white header with logo, shortened labels, roomier cards): the phone was locked after install.
+
 ### 2026-10-14 — Admin dashboard redesigned (professional look) + Library page opens on Reports from the dashboard
 - **Type:** UI redesign
 - **Areas:** mobile (admin)

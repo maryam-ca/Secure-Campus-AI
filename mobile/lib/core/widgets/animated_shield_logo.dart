@@ -14,7 +14,12 @@ import '../theme/app_theme.dart';
 /// rather than duplicated per-screen.
 class AnimatedShieldLogo extends StatefulWidget {
   final double size;
-  const AnimatedShieldLogo({super.key, this.size = 76});
+
+  /// false = the same logo, drawn still (no settle-in, no sheen). Used on
+  /// data screens such as the Admin dashboard, where a constantly moving
+  /// logo would be distracting.
+  final bool animate;
+  const AnimatedShieldLogo({super.key, this.size = 76, this.animate = true});
 
   @override
   State<AnimatedShieldLogo> createState() => _AnimatedShieldLogoState();
@@ -27,8 +32,15 @@ class _AnimatedShieldLogoState extends State<AnimatedShieldLogo> with TickerProv
   @override
   void initState() {
     super.initState();
-    _entrance = AnimationController(vsync: this, duration: const Duration(milliseconds: 750))..forward();
-    _sheen = AnimationController(vsync: this, duration: const Duration(milliseconds: 3600))..repeat();
+    _entrance = AnimationController(vsync: this, duration: const Duration(milliseconds: 750));
+    _sheen = AnimationController(vsync: this, duration: const Duration(milliseconds: 3600));
+    if (widget.animate) {
+      _entrance.forward();
+      _sheen.repeat();
+    } else {
+      _entrance.value = 1; // fully shown straight away
+      _sheen.value = 0;
+    }
   }
 
   @override
