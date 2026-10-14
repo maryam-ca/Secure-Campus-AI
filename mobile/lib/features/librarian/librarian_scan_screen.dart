@@ -120,11 +120,31 @@ class _LibrarianScanScreenState extends ConsumerState<LibrarianScanScreen> {
     await _lookupBook(code);
   }
 
+  /// Stops the camera as soon as a code has been read, so it is not left
+  /// running (and decoding) behind the book sheet. Safe to call when the
+  /// camera is not running (manual ID entry).
+  Future<void> _pauseCamera() async {
+    try {
+      await _controller.stop();
+    } catch (_) {
+      // already stopped / never started
+    }
+  }
+
+  Future<void> _resumeCamera() async {
+    try {
+      await _controller.start();
+    } catch (_) {
+      // the camera view will start it itself when it is shown again
+    }
+  }
+
   Future<void> _lookupBook(String code) async {
     setState(() {
       _handling = true;
       _lastError = null;
     });
+    await _pauseCamera();
 
     final book = await ref.read(librarianRepositoryProvider).fetchBookById(code);
     if (!mounted) return;
@@ -134,6 +154,8 @@ class _LibrarianScanScreenState extends ConsumerState<LibrarianScanScreen> {
         _handling = false;
         _lastError = 'No book found for code "$code".';
       });
+      // Not one of our books: keep scanning so another code can be tried.
+      if (_scanning) await _resumeCamera();
       return;
     }
 
