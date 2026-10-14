@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Locking confirmed working; Admin > Library gets a Reports tab
+- **Rules published:** the new Firestore rules were published by the project owner. `python scripts/check_live_rules.py` now returns HTTP 200 for `issueReports` and `lockHistory` ("The new rules are PUBLISHED"). Locking and unlocking a book work on the phone (confirmed by the user).
+- **Change:** the Admin dashboard's **Library** page now has two tabs, **Catalog** (the existing book list, add book, Locked filter, lock/unlock) and **Reports** (the same view the librarian sees: Issued now / Overdue / Locked / New reports summary, and the students' "I did not borrow this book" reports, which the admin can mark resolved or reopen). The Reports tab shows a badge with the number of new reports.
+- **Files:** mobile/lib/features/admin/admin_library_screen.dart (existing page became the Catalog tab; new `AdminLibraryScreen` wrapper with the tabs), mobile/test/admin_library_test.dart
+- **Verified by:** `flutter test` 46/46 (new: both tabs present with Catalog first; Reports tab shows summary and a student report with its resolve button; badge shows the count of new reports only; no badge when none); `flutter analyze` 0 errors; APK built and installed on the SM-A305F (22:26).
+- **Not verified:** on the phone, and the admin resolving a real report end to end (the rules allow admin updates, covered by the emulator tests).
+- **Notes:** `dart format` was run on the file, so the diff is larger than the change.
+
 ### 2026-10-14 — Locking / reports still denied: live rules confirmed OLD; clearer errors and colours
 - **Reported:** locking a book still gives a permission error; Reports tab shows "could not load reports" under "Student reports", with the summary showing Issued 3, Overdue 0, Locked 0, New reports 0; tile colours need fixing.
 - **Diagnosis (definitive):** a read-only check of the LIVE project (`campus-a4087`), signing in as the demo librarian exactly like the app: `books` and `libraryIssues` return 200, but `issueReports` and `books/BOOK-001/lockHistory` return **403 PERMISSION_DENIED**. The librarian's profile is correct (role `librarian`, active). So the app is fine and the published Firestore rules are still the old ones; the new rules (`firebase/firestore.rules`) are **not published**. They cannot be deployed from this PC: the Firebase CLI account `codecortexpk@gmail.com` gets 403 on project `campus-a4087` (no permission). The phone's log agrees (the `issueReports` listener kept failing with PERMISSION_DENIED).

@@ -4,18 +4,71 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/catalog_logic.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
+import '../../providers/issue_report_providers.dart';
+import '../librarian/librarian_reports_screen.dart';
 import '../library/book_lock_ui.dart';
 
 enum _AvailabilityFilter { all, available, issued, locked }
 
-class AdminLibraryScreen extends ConsumerStatefulWidget {
+/// Admin > Library: the book Catalog, and Reports (library summary plus the
+/// students' "I did not borrow this book" reports). The same Reports view the
+/// librarian sees; the admin can also mark a report resolved.
+class AdminLibraryScreen extends ConsumerWidget {
   const AdminLibraryScreen({super.key});
 
   @override
-  ConsumerState<AdminLibraryScreen> createState() => _AdminLibraryScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final newReports =
+        ref
+            .watch(issueReportsProvider)
+            .valueOrNull
+            ?.where((r) => r.isOpen)
+            .length ??
+        0;
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Material(
+            color: Theme.of(context).colorScheme.surface,
+            child: TabBar(
+              tabs: [
+                const Tab(text: 'Catalog'),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Reports'),
+                      if (newReports > 0) ...[
+                        const SizedBox(width: 6),
+                        Badge(label: Text('$newReports')),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [_AdminCatalogView(), LibrarianReportsScreen()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
+class _AdminCatalogView extends ConsumerStatefulWidget {
+  const _AdminCatalogView();
+
+  @override
+  ConsumerState<_AdminCatalogView> createState() => _AdminCatalogViewState();
+}
+
+class _AdminCatalogViewState extends ConsumerState<_AdminCatalogView> {
   final _searchController = TextEditingController();
   String _query = '';
   _AvailabilityFilter _filter = _AvailabilityFilter.all;
@@ -23,7 +76,9 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
   List<BookModel> _apply(List<BookModel> books) {
     var result = books;
     if (_filter == _AvailabilityFilter.available) {
-      result = result.where((b) => bookState(b) == BookState.available).toList();
+      result = result
+          .where((b) => bookState(b) == BookState.available)
+          .toList();
     } else if (_filter == _AvailabilityFilter.issued) {
       result = result.where((b) => bookState(b) == BookState.issued).toList();
     } else if (_filter == _AvailabilityFilter.locked) {
@@ -32,7 +87,12 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
     if (_query.isNotEmpty) {
       final q = _query.toLowerCase();
       result = result
-          .where((b) => b.title.toLowerCase().contains(q) || b.id.toLowerCase().contains(q) || b.author.toLowerCase().contains(q))
+          .where(
+            (b) =>
+                b.title.toLowerCase().contains(q) ||
+                b.id.toLowerCase().contains(q) ||
+                b.author.toLowerCase().contains(q),
+          )
           .toList();
     }
     return result;
@@ -44,7 +104,10 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(context: context, builder: (_) => const _AddBookDialog()),
+        onPressed: () => showDialog(
+          context: context,
+          builder: (_) => const _AddBookDialog(),
+        ),
         icon: const Icon(Icons.add),
         label: const Text('Add Book'),
       ),
@@ -55,31 +118,61 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _query = v),
-              decoration: const InputDecoration(hintText: 'Search by title, ID, or author', prefixIcon: Icon(Icons.search, size: 20)),
+              decoration: const InputDecoration(
+                hintText: 'Search by title, ID, or author',
+                prefixIcon: Icon(Icons.search, size: 20),
+              ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                ChoiceChip(label: const Text('All'), selected: _filter == _AvailabilityFilter.all, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.all)),
+                ChoiceChip(
+                  label: const Text('All'),
+                  selected: _filter == _AvailabilityFilter.all,
+                  onSelected: (_) =>
+                      setState(() => _filter = _AvailabilityFilter.all),
+                ),
                 const SizedBox(width: 8),
-                ChoiceChip(label: const Text('Available'), selected: _filter == _AvailabilityFilter.available, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.available)),
+                ChoiceChip(
+                  label: const Text('Available'),
+                  selected: _filter == _AvailabilityFilter.available,
+                  onSelected: (_) =>
+                      setState(() => _filter = _AvailabilityFilter.available),
+                ),
                 const SizedBox(width: 8),
-                ChoiceChip(label: const Text('Issued'), selected: _filter == _AvailabilityFilter.issued, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.issued)),
+                ChoiceChip(
+                  label: const Text('Issued'),
+                  selected: _filter == _AvailabilityFilter.issued,
+                  onSelected: (_) =>
+                      setState(() => _filter = _AvailabilityFilter.issued),
+                ),
                 const SizedBox(width: 8),
-                ChoiceChip(label: const Text('Locked'), selected: _filter == _AvailabilityFilter.locked, onSelected: (_) => setState(() => _filter = _AvailabilityFilter.locked)),
+                ChoiceChip(
+                  label: const Text('Locked'),
+                  selected: _filter == _AvailabilityFilter.locked,
+                  onSelected: (_) =>
+                      setState(() => _filter = _AvailabilityFilter.locked),
+                ),
               ],
             ),
           ),
           Expanded(
             child: booksAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Could not load books.\n$err')),
+              error: (err, _) =>
+                  Center(child: Text('Could not load books.\n$err')),
               data: (allBooks) {
-                if (allBooks.isEmpty) return const Center(child: Text('No books in the catalog yet.'));
+                if (allBooks.isEmpty)
+                  return const Center(
+                    child: Text('No books in the catalog yet.'),
+                  );
                 final books = _apply(allBooks);
-                if (books.isEmpty) return const Center(child: Text('No books match your search/filter.'));
+                if (books.isEmpty)
+                  return const Center(
+                    child: Text('No books match your search/filter.'),
+                  );
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
                   itemCount: books.length,
@@ -102,14 +195,28 @@ class _AdminLibraryScreenState extends ConsumerState<AdminLibraryScreen> {
                             PopupMenuButton<String>(
                               tooltip: 'Book options',
                               onSelected: (v) {
-                                if (v == 'lock') showLockBookDialog(context, ref, b);
-                                if (v == 'unlock') showUnlockBookDialog(context, ref, b);
-                                if (v == 'history') showLockHistorySheet(context, b);
+                                if (v == 'lock')
+                                  showLockBookDialog(context, ref, b);
+                                if (v == 'unlock')
+                                  showUnlockBookDialog(context, ref, b);
+                                if (v == 'history')
+                                  showLockHistorySheet(context, b);
                               },
                               itemBuilder: (_) => [
-                                if (!isLocked) const PopupMenuItem(value: 'lock', child: Text('Lock book...')),
-                                if (isLocked) const PopupMenuItem(value: 'unlock', child: Text('Unlock book...')),
-                                const PopupMenuItem(value: 'history', child: Text('Lock history')),
+                                if (!isLocked)
+                                  const PopupMenuItem(
+                                    value: 'lock',
+                                    child: Text('Lock book...'),
+                                  ),
+                                if (isLocked)
+                                  const PopupMenuItem(
+                                    value: 'unlock',
+                                    child: Text('Unlock book...'),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'history',
+                                  child: Text('Lock history'),
+                                ),
                               ],
                             ),
                           ],
@@ -151,7 +258,9 @@ class _AddBookDialogState extends ConsumerState<_AddBookDialog> {
     if (_id.text.trim().isEmpty || _title.text.trim().isEmpty) return;
     setState(() => _submitting = true);
     try {
-      await ref.read(adminRepositoryProvider).upsertBook(
+      await ref
+          .read(adminRepositoryProvider)
+          .upsertBook(
             _id.text.trim(),
             _title.text.trim(),
             _author.text.trim(),
@@ -172,30 +281,56 @@ class _AddBookDialogState extends ConsumerState<_AddBookDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: _id, decoration: const InputDecoration(labelText: 'Book ID (e.g. BOOK-006)')),
+            TextField(
+              controller: _id,
+              decoration: const InputDecoration(
+                labelText: 'Book ID (e.g. BOOK-006)',
+              ),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(
+              controller: _title,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _author, decoration: const InputDecoration(labelText: 'Author')),
+            TextField(
+              controller: _author,
+              decoration: const InputDecoration(labelText: 'Author'),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _category, decoration: const InputDecoration(labelText: 'Category')),
+            TextField(
+              controller: _category,
+              decoration: const InputDecoration(labelText: 'Category'),
+            ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Generate its QR code with scripts/generate_qr_codes.py after adding a new book ID here.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontSize: 12),
               ),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : const Text('Add'),
         ),
       ],
