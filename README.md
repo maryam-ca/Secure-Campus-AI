@@ -184,7 +184,13 @@ the live recognition loop instead of a manual curl call.
 
 ```
 ./run.sh                    # iris_ai + bus_eta
-cd mobile && flutter run    # the app
+# the app - from the project root (Windows; note the leading .\):
+.\run_app.bat                  # flutter run on the connected phone, with demo accounts
+.\install_app.bat              # build + install + launch, no hot-reload session
+# or: cd mobile  and then  flutter run
+# Do NOT run plain `flutter run` in the project root: the Flutter app is in
+# mobile/, and from the root Flutter walks up to an unrelated project in your
+# user folder and builds that one instead.
 ```
 
 `functions/` runs on Firebase's infrastructure once deployed — nothing
