@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/catalog_logic.dart';
 import '../../models/admin_models.dart';
+import '../../providers/admin_navigation_provider.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/issue_report_providers.dart';
 import '../librarian/librarian_reports_screen.dart';
@@ -26,8 +27,18 @@ class AdminLibraryScreen extends ConsumerWidget {
             .length ??
         0;
 
+    // The dashboard can ask for the Reports tab ("New student reports").
+    // Read it once for the first tab, then reset so the next visit starts on Catalog.
+    final requestedTab = ref.read(adminLibraryTabProvider).clamp(0, 1);
+    if (requestedTab != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(adminLibraryTabProvider.notifier).state = 0;
+      });
+    }
+
     return DefaultTabController(
       length: 2,
+      initialIndex: requestedTab,
       child: Column(
         children: [
           Material(

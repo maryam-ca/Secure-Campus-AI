@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// admin_home_shell.dart). Shared so dashboard cards can jump to a section.
 final adminSectionProvider = StateProvider<int>((ref) => 0);
 
+/// Which tab of Admin > Library to open next: 0 = Catalog, 1 = Reports.
+/// The dashboard sets it (e.g. "New student reports" opens Reports); the
+/// Library page reads it when it opens, then resets it to 0.
+final adminLibraryTabProvider = StateProvider<int>((ref) => 0);
+
 /// Section indexes, in the same order as the shell's drawer.
 class AdminSection {
   AdminSection._();
