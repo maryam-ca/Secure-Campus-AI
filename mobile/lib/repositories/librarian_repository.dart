@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/utils/issue_search.dart';
 import '../models/admin_models.dart';
 import '../models/student_model.dart';
 
@@ -61,11 +63,32 @@ class LibrarianRepository {
     await batch.commit();
   }
 
-  Future<void> returnBook(LibrarianIssueRow issue) async {
+  /// Marks the loan returned and frees the book. [method] records how the
+  /// librarian confirmed it (scanned the book's QR, or typed its ID), plus
+  /// who and when, so returns can be audited later.
+  Future<void> returnBook(LibrarianIssueRow issue, {required ReturnMethod method}) async {
     final batch = _db.batch();
-    batch.update(_db.collection('libraryIssues').doc(issue.id), {'returned': true});
+    batch.update(_db.collection('libraryIssues').doc(issue.id), {
+      'returned': true,
+      'returnedAt': FieldValue.serverTimestamp(),
+      'returnedBy': FirebaseAuth.instance.currentUser?.uid,
+      'returnMethod': method.id,
+    });
     batch.update(_db.collection('books').doc(issue.bookId), {'available': true});
     await batch.commit();
+  }
+
+  /// The open loan for a book, if any (used when a librarian scans a book
+  /// that is already issued, so it can be returned right from the scan).
+  Future<LibrarianIssueRow?> fetchActiveIssueForBook(String bookId) async {
+    final snap = await _db
+        .collection('libraryIssues')
+        .where('bookId', isEqualTo: bookId)
+        .where('returned', isEqualTo: false)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+    return LibrarianIssueRow.fromFirestore(snap.docs.first);
   }
 
   Stream<List<LibrarianIssueRow>> watchActiveIssues() {

@@ -3,15 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/issue_search.dart';
 import '../../core/widgets/pressable_scale.dart';
 import '../../models/admin_models.dart';
 import '../../providers/librarian_providers.dart';
+import 'return_verify_screen.dart';
 
-class LibrarianIssuedBooksScreen extends ConsumerWidget {
+class LibrarianIssuedBooksScreen extends ConsumerStatefulWidget {
   const LibrarianIssuedBooksScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LibrarianIssuedBooksScreen> createState() => _LibrarianIssuedBooksScreenState();
+}
+
+class _LibrarianIssuedBooksScreenState extends ConsumerState<LibrarianIssuedBooksScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+  bool _overdueOnly = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final issuesAsync = ref.watch(activeIssuesProvider);
     final dateFmt = DateFormat('dd MMM yyyy');
 
@@ -20,8 +37,8 @@ class LibrarianIssuedBooksScreen extends ConsumerWidget {
       child: issuesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Could not load issued books.\n$err')),
-        data: (issues) {
-          if (issues.isEmpty) {
+        data: (all) {
+          if (all.isEmpty) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
@@ -29,37 +46,70 @@ class LibrarianIssuedBooksScreen extends ConsumerWidget {
               ),
             );
           }
-          final overdue = issues.where((i) => i.isOverdue).length;
+          final overdueCount = all.where((i) => i.isOverdue).length;
+          final searched = searchIssues(all, _query);
+          final issues = _overdueOnly ? searched.where((i) => i.isOverdue).toList() : searched;
 
           return Column(
             children: [
-              if (overdue > 0)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search book title or ID, student name or ID',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          ),
+                    filled: true,
+                    fillColor: AppColors.cardBackground,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$overdue book${overdue == 1 ? '' : 's'} overdue',
-                        style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
+                  onChanged: (v) => setState(() => _query = v),
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: Text('All (${all.length})'),
+                      selected: !_overdueOnly,
+                      onSelected: (_) => setState(() => _overdueOnly = false),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text('Overdue ($overdueCount)'),
+                      selected: _overdueOnly,
+                      selectedColor: AppColors.error.withValues(alpha: 0.18),
+                      onSelected: (_) => setState(() => _overdueOnly = true),
+                    ),
+                    const Spacer(),
+                    Text('${issues.length} shown', style: const TextStyle(color: AppColors.bodyText, fontSize: 12)),
+                  ],
+                ),
+              ),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: issues.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => _IssueCard(issue: issues[i], dateFmt: dateFmt),
-                ),
+                child: issues.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('No issued books match your search.',
+                              style: TextStyle(color: AppColors.bodyText)),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: issues.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, i) => _IssueCard(issue: issues[i], dateFmt: dateFmt),
+                      ),
               ),
             ],
           );
@@ -81,10 +131,30 @@ class _IssueCard extends ConsumerStatefulWidget {
 class _IssueCardState extends ConsumerState<_IssueCard> {
   bool _returning = false;
 
+  /// The book in hand must be confirmed first (scan its QR, or type its ID).
+  /// Only then is the loan returned.
   Future<void> _handleReturn() async {
+    final method = await Navigator.of(context).push<ReturnMethod>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => ReturnVerifyScreen(issue: widget.issue),
+      ),
+    );
+    if (method == null || !mounted) return;
+
     setState(() => _returning = true);
     try {
-      await ref.read(librarianRepositoryProvider).returnBook(widget.issue);
+      await ref.read(librarianRepositoryProvider).returnBook(widget.issue, method: method);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Returned "${widget.issue.bookTitle}" from ${widget.issue.studentName}'
+              '${method == ReturnMethod.manual ? ' (ID entered manually)' : ''}.'),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not return the book: $e')));
+      }
     } finally {
       if (mounted) setState(() => _returning = false);
     }
