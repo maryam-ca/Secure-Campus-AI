@@ -16,40 +16,48 @@ StudentModel _s(String reg, String name) => StudentModel(
 final _students = [
   _s('FA23-BSE-001', 'Ayesha Khan'),
   _s('FA23-BSE-007', 'Mehak Fatima'),
-  _s('FA22-BSE-007', 'Older Batch Seven'),
+  _s('FA22-BSE-007', 'Ayesha Malik'),
   _s('FA23-BSE-010', 'Omar Farooq'),
+  _s('FA23-BSE-032', 'Ayesha'),
 ];
 
+List<String> _ids(String q) => searchStudents(_students, q).map((s) => s.registrationNumber).toList();
+
 void main() {
-  test('last three digits find the student', () {
-    final r = searchStudentsByRegNo(_students, '010');
-    expect(r.map((s) => s.name), ['Omar Farooq']);
+  test('"00" lists every student whose ID contains 00', () {
+    // 001, 007 (x2) contain "00"; 010 and 032 do not.
+    expect(_ids('00'), ['FA22-BSE-007', 'FA23-BSE-001', 'FA23-BSE-007']);
   });
 
-  test('same ending in two intakes returns both, sorted by registration number', () {
-    final r = searchStudentsByRegNo(_students, '007');
-    expect(r.map((s) => s.registrationNumber), ['FA22-BSE-007', 'FA23-BSE-007']);
+  test('part of an ID matches anywhere in it, in any case or format', () {
+    expect(_ids('007'), ['FA22-BSE-007', 'FA23-BSE-007']);
+    expect(_ids('bse-01'), ['FA23-BSE-010']);
+    expect(_ids('fa23 bse 007'), ['FA23-BSE-007']);
+    expect(_ids('FA23BSE032'), ['FA23-BSE-032']);
   });
 
-  test('longer input narrows to one; full number works in any case and format', () {
-    expect(searchStudentsByRegNo(_students, 'BSE-007').length, 2);
-    expect(searchStudentsByRegNo(_students, 'fa23-bse-007').single.name, 'Mehak Fatima');
-    expect(searchStudentsByRegNo(_students, 'FA23 BSE 007').single.name, 'Mehak Fatima');
-    expect(searchStudentsByRegNo(_students, 'fa23bse007').single.name, 'Mehak Fatima');
+  test('"ayesh" lists every student with those letters in the name', () {
+    expect(_ids('ayesh'), ['FA22-BSE-007', 'FA23-BSE-001', 'FA23-BSE-032']);
+    expect(_ids('AYESH'), ['FA22-BSE-007', 'FA23-BSE-001', 'FA23-BSE-032']);
   });
 
-  test('fewer than three characters or no match returns nothing', () {
-    expect(searchStudentsByRegNo(_students, ''), isEmpty);
-    expect(searchStudentsByRegNo(_students, '07'), isEmpty);
-    expect(searchStudentsByRegNo(_students, '99'), isEmpty);
-    expect(searchStudentsByRegNo(_students, '999'), isEmpty);
+  test('name search works for any part, including a second word', () {
+    expect(_ids('khan'), ['FA23-BSE-001']);
+    expect(_ids('ha K'), ['FA23-BSE-001']); // "Ayesha Khan" contains "ha k"
   });
 
-  test('matches the END of the number, not the middle', () {
-    // "BSE" appears in every number but none of them ends with it.
-    expect(searchStudentsByRegNo(_students, 'BSE'), isEmpty);
-    // "23-" digits in the middle must not match either.
-    expect(searchStudentsByRegNo(_students, 'FA23'), isEmpty);
+  test('a single match is still returned as a list (nothing auto-picked)', () {
+    final r = searchStudents(_students, 'omar');
+    expect(r.length, 1);
+    expect(r.single.name, 'Omar Farooq');
+  });
+
+  test('fewer than 2 characters or no match returns nothing', () {
+    expect(_ids(''), isEmpty);
+    expect(_ids('a'), isEmpty);
+    expect(_ids(' 0 '), isEmpty);
+    expect(_ids('zzz'), isEmpty);
+    expect(_ids('999'), isEmpty);
   });
 
   test('normalizeRegNo strips separators and upper-cases', () {

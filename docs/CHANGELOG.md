@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Librarian student search: by any part of ID or name, librarian picks (replaces the last-3-digits rule)
+- **Type:** change (UX), requested by the team
+- **Areas:** mobile (librarian)
+- **What changed:** The issue sheet field is now "Student ID or name". From **2 characters** it lists every student whose registration number **contains** the text (`00` lists all IDs with 00) or whose **name contains** it (`ayesh` lists every name with those letters); case, dashes and spaces are ignored for IDs, case for names. The list shows name plus the complete ID, program and semester, with a "N students found - check the name and ID, then tap one" line. **Nothing is selected automatically**, even for a single match; the librarian taps the correct student, and editing the text clears the selection. Replaces the "ends with last 3 digits" behaviour added earlier today (function renamed `searchStudents`).
+- **Files:** mobile/lib/core/utils/student_search.dart, mobile/lib/features/librarian/librarian_scan_screen.dart, mobile/test/student_search_test.dart
+- **Verified by:** `flutter test` 22/22 (search tests: 00 across IDs, ID formats, name parts and case, single match still a list, under 2 characters, no match); `flutter analyze` 0 errors; installed on the SM-A305F with `adb install -r` (update in place).
+- **Not verified:** the sheet on the phone (needs a librarian login and a scanned book).
+- **Notes:** A 3-letter text such as `BSE` matches every ID (all contain it) and lists everyone; the list scrolls. The full student list is fetched when the sheet opens.
+
 ### 2026-10-14 — Librarian: find the student by the last 3 digits (A2.1 fix)
 - **Type:** fix / UX
 - **Areas:** mobile (librarian)
