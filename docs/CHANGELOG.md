@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Fix: running the app from the project root (run_app.bat, install_app.bat)
+- **Type:** fix (tooling)
+- **Problem:** `flutter run` in the project root built a different app (`safekid_transport_assistant`, from `C:\Users\Maryam`) and failed with its errors. The SecureCampus Flutter app lives in `mobile/`; the root has no `pubspec.yaml`, so Flutter walks up to the first one it finds (the stray `C:\Users\Maryam\pubspec.yaml`).
+- **Checked on the phone (SM-A305F):** the installed SecureCampus starts normally (Firebase initialises, no crash in the log); `flutter run` from `mobile/` builds, installs and attaches without errors; the new `run_app.bat` run from the root does the same.
+- **Fix:** added `run_app.bat` (runs `flutter run` inside `mobile/`, adds the demo-accounts define if `demo_accounts.json` exists or can be created) and `install_app.bat` (build, `adb install -r`, falls back to `flutter install` on a signature mismatch, then launches). README updated. Local VS Code launch entry added in `.vscode/launch.json` (that folder is git-ignored).
+- **Use (PowerShell/cmd, from the project root):** `.\run_app.bat` or `.\install_app.bat`. The `.\` is required on this PC: `NoDefaultCurrentDirectoryInExePath=1` stops Windows running scripts from the current folder without it.
+- **Files:** run_app.bat, install_app.bat, README.md
+- **Not verified:** `install_app.bat` itself (its steps were run separately earlier); the phone screen was locked, so the UI was not looked at.
+- **Notes:** The unrelated project in `C:\Users\Maryam` (pubspec.yaml, android/, lib/) will keep confusing Flutter in any folder that has no pubspec of its own. Moving it into its own folder would remove the problem for good; not touched.
+
 ### 2026-10-14 — Librarian portal reorganised (Home / Catalog / Reports) and "Locked" books with full history
 - **Type:** feature + safety
 - **Areas:** mobile (librarian, admin), Firestore rules, new rules tests
