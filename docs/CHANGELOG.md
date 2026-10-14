@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Fix: scanner camera no longer keeps running behind the book sheet
+- **Type:** fix (battery / behaviour)
+- **Areas:** mobile (librarian Home scan)
+- **Problem:** after a QR code was read and the book sheet opened, the camera preview kept running behind the sheet. A flag ignored further codes, so nothing was scanned twice, but the camera and decoder stayed on until the sheet was closed.
+- **Fix:** the camera is stopped as soon as a code is read (also when the ID is typed instead). If the code is not one of our books, the camera restarts so another code can be scanned. When the sheet closes the camera view goes away as before, and the next tap on Scan starts the camera fresh. The package's own lifecycle restart does not apply here because the screen uses its own scanner controller.
+- **Files:** mobile/lib/features/librarian/librarian_scan_screen.dart
+- **Verified by:** `flutter test` 40/40 and `flutter analyze` 0 errors (no tests can drive the camera); APK built and installed on the SM-A305F.
+- **Not verified:** on the phone: that the preview freezes/stops behind the sheet, that an unknown code restarts scanning, and that a second scan after closing the sheet works. Please try each once.
+
 ### 2026-10-14 — Fix: red error screen in the librarian portal when a Firestore query is denied
 - **Type:** fix (crash)
 - **Areas:** mobile (librarian, student library, lock actor)
