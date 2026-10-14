@@ -9,126 +9,19 @@ import '../../models/admin_models.dart';
 import '../../providers/librarian_providers.dart';
 import 'return_verify_screen.dart';
 
-class LibrarianIssuedBooksScreen extends ConsumerStatefulWidget {
-  const LibrarianIssuedBooksScreen({super.key});
-
-  @override
-  ConsumerState<LibrarianIssuedBooksScreen> createState() => _LibrarianIssuedBooksScreenState();
-}
-
-class _LibrarianIssuedBooksScreenState extends ConsumerState<LibrarianIssuedBooksScreen> {
-  final _searchController = TextEditingController();
-  String _query = '';
-  bool _overdueOnly = false;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final issuesAsync = ref.watch(activeIssuesProvider);
-    final dateFmt = DateFormat('dd MMM yyyy');
-
-    return Container(
-      color: AppColors.background,
-      child: issuesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Could not load issued books.\n$err')),
-        data: (all) {
-          if (all.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('No books currently issued.', style: TextStyle(color: AppColors.bodyText)),
-              ),
-            );
-          }
-          final overdueCount = all.where((i) => i.isOverdue).length;
-          final searched = searchIssues(all, _query);
-          final issues = _overdueOnly ? searched.where((i) => i.isOverdue).toList() : searched;
-
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search book title or ID, student name or ID',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _query.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                          ),
-                    filled: true,
-                    fillColor: AppColors.cardBackground,
-                  ),
-                  onChanged: (v) => setState(() => _query = v),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: Row(
-                  children: [
-                    ChoiceChip(
-                      label: Text('All (${all.length})'),
-                      selected: !_overdueOnly,
-                      onSelected: (_) => setState(() => _overdueOnly = false),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: Text('Overdue ($overdueCount)'),
-                      selected: _overdueOnly,
-                      selectedColor: AppColors.error.withValues(alpha: 0.18),
-                      onSelected: (_) => setState(() => _overdueOnly = true),
-                    ),
-                    const Spacer(),
-                    Text('${issues.length} shown', style: const TextStyle(color: AppColors.bodyText, fontSize: 12)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: issues.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('No issued books match your search.',
-                              style: TextStyle(color: AppColors.bodyText)),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: issues.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, i) => _IssueCard(issue: issues[i], dateFmt: dateFmt),
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _IssueCard extends ConsumerStatefulWidget {
+/// One active loan (book, student, dates) with a Return button. Returning
+/// first asks the librarian to scan the book (or type its ID) so the right
+/// book is confirmed; see [ReturnVerifyScreen].
+class IssuedLoanCard extends ConsumerStatefulWidget {
   final LibrarianIssueRow issue;
   final DateFormat dateFmt;
-  const _IssueCard({required this.issue, required this.dateFmt});
+  const IssuedLoanCard({required this.issue, required this.dateFmt});
 
   @override
-  ConsumerState<_IssueCard> createState() => _IssueCardState();
+  ConsumerState<IssuedLoanCard> createState() => _IssuedLoanCardState();
 }
 
-class _IssueCardState extends ConsumerState<_IssueCard> {
+class _IssuedLoanCardState extends ConsumerState<IssuedLoanCard> {
   bool _returning = false;
 
   /// The book in hand must be confirmed first (scan its QR, or type its ID).

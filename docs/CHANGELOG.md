@@ -28,6 +28,29 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Librarian portal reorganised (Home / Catalog / Reports) and "Locked" books with full history
+- **Type:** feature + safety
+- **Areas:** mobile (librarian, admin), Firestore rules, new rules tests
+- **Tabs:** Librarian now has **Home | Catalog | Reports** (was Scan & Issue | Issued | Catalog | Reports). The duplicate Issued tab is gone.
+  - **Home:** "Issue or Return a book". One scan: an available book opens the issue sheet, an issued book opens the return sheet, a locked book opens a locked notice (reason, who locked it, when, Unlock and History buttons).
+  - **Catalog sub-tabs with the quantity written under each:** All, Available, Issued, Overdue, Locked. Issued and Overdue list the loans (student, due date, Return with the scan check, search by book or student). Overdue is also counted under Issued (stated on screen). Search covers title, ID, author (books) or book/student (loans).
+  - **Reports:** a short summary (Issued now, Overdue, Locked, New reports) above the students' "I did not borrow this" reports; the tab shows a badge with the number of new reports. No tiles on Home.
+- **Locked books (new category):**
+  - A book can be locked only when it has been received. An issued book must be returned first, then locked (it is then physically in the safe). Enforced in a Firestore transaction.
+  - The reason is free text and **required** for locking and for unlocking.
+  - Librarian **and Admin** can lock and unlock (Admin from the Admin Library screen, which also got a Locked filter).
+  - Every lock/unlock is appended to `books/{id}/lockHistory` with action, reason, who (uid, name, role) and when; the history is append-only and shown via "Lock history".
+  - A locked book cannot be issued: checked in the app, inside the issue transaction, and by a Firestore rule that rejects a new loan for a locked book even from a modified client. Issuing also now re-reads the book in a transaction, so a book issued or locked a moment ago by someone else is refused.
+- **Files (new):** mobile/lib/core/utils/catalog_logic.dart, features/library/book_lock_ui.dart, features/librarian/{issued_loan_card,librarian_reports_screen}.dart, repositories/book_lock_repository.dart, providers/book_lock_providers.dart, mobile/test/catalog_test.dart, firebase/rules-tests/*. **Changed:** admin_models.dart (BookModel lock fields, BookLockEvent), librarian_{home,catalog,scan}_screen.dart, admin_library_screen.dart, librarian_repository.dart, firebase/firestore.rules, .gitignore. **Removed:** librarian_issued_books_screen.dart (its loan card lives on in the Catalog).
+- **Verified by:**
+  - `flutter test` **38/38** (new: book states and counts, filters, loan search, older books without lock fields, Catalog screen shows 5/2/2/1/1 under the tabs, Locked tab shows reason + Unlock, Overdue tab shows only the overdue loan, Available tab hides issued/locked).
+  - `flutter analyze` 0 errors.
+  - **Firestore rules tested against the real emulator: 11/11 pass** (lock history: own uid only, reason required, extra fields refused, append-only, hidden from students/security; locked book cannot be issued by librarian or admin; students cannot issue or edit books; students read only their own loans; no student access to gate entries or iris data; report creation only for the student's own loan and with the right shape; staff change only the status). Run: `cd firebase/rules-tests && npm install`, then from the repo root `firebase emulators:exec --only firestore --project demo-securecampus "npm --prefix firebase/rules-tests test"`.
+  - APK built and installed on the SM-A305F.
+- **NOT verified:** the new screens on the phone; the Dart lock/unlock transaction against a real Firestore (rules are tested, the Dart repository code itself has no automated test); catalog behaviour with real data.
+- **MUST DO before locking works on the phone:** deploy the rules with `firebase deploy --only firestore:rules`. Until then the new `lockHistory` writes are denied (no rule yet) and a lock attempt shows an error.
+- **Notes:** The earlier `flutter analyze` hint count is unchanged (style infos only). The Admin screen can lock/unlock but has no loan view. Closes the A2.6 library rules test and starts A4.7.
+
 ### 2026-10-14 — Library: search on the Issued list, verified returns (scan or typed ID), return from the Scan tab
 - **Type:** feature / safety fix (A2.1, A2.5 part)
 - **Areas:** mobile (librarian), Firestore data

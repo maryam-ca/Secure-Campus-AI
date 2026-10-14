@@ -166,6 +166,20 @@ service cloud.firestore {
       allow write: if isAdmin() || isLibrarian();
     }
 
+    // Lock history: who locked or unlocked a book, in which role, when and why.
+    // Append-only (never edited or deleted) so it is a trustworthy record.
+    match /books/{bookId}/lockHistory/{eventId} {
+      allow read: if isAdmin() || isLibrarian();
+      allow create: if (isAdmin() || isLibrarian())
+                    && request.resource.data.keys().hasOnly(['action', 'reason', 'byUid', 'byName', 'byRole', 'at'])
+                    && request.resource.data.action in ['LOCK', 'UNLOCK']
+                    && request.resource.data.byUid == request.auth.uid
+                    && request.resource.data.reason is string
+                    && request.resource.data.reason.size() > 0
+                    && request.resource.data.reason.size() <= 200;
+      allow update, delete: if false;
+    }
+
     // ---------------------------------------------------------------
     // issueReports - a student reports a book they say they never
     // borrowed (proposal 4.2). The student may create one only for a loan
@@ -190,7 +204,11 @@ service cloud.firestore {
 
     match /libraryIssues/{issueId} {
       allow read: if isAdmin() || isLibrarian() || (isStudent() && resource.data.studentId == request.auth.uid);
-      allow write: if isAdmin() || isLibrarian();
+      // A locked book (kept in the safe) can never be issued, even by a
+      // modified client; the app also checks this inside a transaction.
+      allow create: if (isAdmin() || isLibrarian())
+                    && get(/databases/$(database)/documents/books/$(request.resource.data.bookId)).data.get('locked', false) != true;
+      allow update, delete: if isAdmin() || isLibrarian();
     }
 
     // ---------------------------------------------------------------

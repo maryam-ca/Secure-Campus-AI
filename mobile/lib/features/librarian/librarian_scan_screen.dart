@@ -9,6 +9,7 @@ import '../../core/utils/student_search.dart';
 import '../../core/widgets/animated_shield_logo.dart';
 import '../../core/widgets/pressable_scale.dart';
 import '../../models/admin_models.dart';
+import '../library/book_lock_ui.dart';
 import '../../models/student_model.dart';
 import '../../providers/librarian_providers.dart';
 
@@ -153,7 +154,11 @@ class _LibrarianScanScreenState extends ConsumerState<LibrarianScanScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       backgroundColor: AppColors.cardBackground,
-      builder: (_) => openLoan != null ? _BookReturnSheet(issue: openLoan) : _BookIssueSheet(book: book),
+      builder: (_) => book.locked
+          ? _BookLockedSheet(book: book)
+          : openLoan != null
+              ? _BookReturnSheet(issue: openLoan)
+              : _BookIssueSheet(book: book),
     );
 
     if (mounted) setState(() {
@@ -188,10 +193,10 @@ class _LibrarianScanScreenState extends ConsumerState<LibrarianScanScreen> {
         children: [
           const AnimatedShieldLogo(size: 72),
           const SizedBox(height: 18),
-          Text('Ready to issue a book', style: Theme.of(context).textTheme.titleLarge),
+          Text('Issue or Return a book', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           const Text(
-            'Scan a book\'s QR code, or type its Book ID below.',
+            'Scan a book\'s QR code, or type its Book ID below. An available book is issued; an issued book is returned.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.bodyText),
           ),
@@ -733,6 +738,69 @@ class _BookReturnSheetState extends ConsumerState<_BookReturnSheet> {
                   : const Icon(Icons.assignment_return_outlined),
               label: const Text('Return this book'),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when the scanned book is locked (kept in the safe): it cannot be
+/// issued. Shows why, who locked it and when, and lets the librarian unlock
+/// it (with a reason, recorded in the history) or view the lock history.
+class _BookLockedSheet extends ConsumerWidget {
+  final BookModel book;
+  const _BookLockedSheet({required this.book});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final when = book.lockedAt == null ? '' : ' on ${DateFormat('dd MMM yyyy').format(book.lockedAt!.toLocal())}';
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(22, 18, 22, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.lock, color: AppColors.error, size: 18),
+              SizedBox(width: 6),
+              Text('This book is LOCKED - it cannot be issued',
+                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w800)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(book.title, style: Theme.of(context).textTheme.titleLarge),
+          Text('${book.id} · ${book.author}', style: const TextStyle(color: AppColors.bodyText)),
+          const SizedBox(height: 14),
+          Text('Reason: ${book.lockReason.isEmpty ? '-' : book.lockReason}',
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text('Locked by ${book.lockedByName.isEmpty ? 'unknown' : book.lockedByName}$when',
+              style: const TextStyle(color: AppColors.bodyText)),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => showLockHistorySheet(context, book),
+                  icon: const Icon(Icons.history, size: 18),
+                  label: const Text('History'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await showUnlockBookDialog(context, ref, book);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.lock_open, size: 18),
+                  label: const Text('Unlock'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
