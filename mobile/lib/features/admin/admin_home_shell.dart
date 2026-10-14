@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../providers/admin_navigation_provider.dart';
+import '../../models/app_user.dart';
 import '../../providers/auth_provider.dart';
 import 'admin_accounts_screen.dart';
 import 'admin_bus_screen.dart';
@@ -77,17 +78,8 @@ class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
         if (!isWide) Navigator.of(context).pop();
       },
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 16, 12),
-          child: Text(
-            'SecureCampus Admin',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              color: AppColors.navyText,
-            ),
-          ),
-        ),
+        _DrawerHeader(user: ref.watch(currentAppUserProvider).valueOrNull),
+        const SizedBox(height: 8),
         for (final s in _sections)
           NavigationDrawerDestination(icon: Icon(s.icon), label: Text(s.label)),
         const Divider(height: 24, indent: 16, endIndent: 16),
@@ -119,6 +111,76 @@ class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
           SizedBox(width: 260, child: drawerContent),
           const VerticalDivider(width: 1, color: AppColors.divider),
           Expanded(child: body),
+        ],
+      ),
+    );
+  }
+}
+
+/// Branded block at the top of the Admin drawer: logo, app name, who is
+/// signed in and their role.
+class _DrawerHeader extends StatelessWidget {
+  final AppUser? user;
+  const _DrawerHeader({this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (user?.name.trim().isNotEmpty ?? false) ? user!.name.trim() : 'Administrator';
+    final email = user?.email ?? '';
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 22, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.navyText, AppColors.primaryBlueDark, AppColors.primaryBlue],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.shield_outlined, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'SecureCampus',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+          if (email.isNotEmpty)
+            Text(email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12.5)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text('Administrator',
+                style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600)),
+          ),
         ],
       ),
     );

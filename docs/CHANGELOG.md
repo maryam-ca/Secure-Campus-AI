@@ -28,6 +28,25 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Admin dashboard redesigned (professional look) + Library page opens on Reports from the dashboard
+- **Type:** UI redesign
+- **Areas:** mobile (admin)
+- **Problems found on the phone (screenshot of the old dashboard):** a red "BOTTOM OVERFLOWED BY 15 PIXELS" error on the Unknown Alerts card; the bus status cut off as "Idle (last known ..."; a lone card in the last row and an empty lower half; plain white boxes with no hierarchy and nothing to say what needs action.
+- **New dashboard:**
+  - **Greeting banner** (navy to blue gradient): time-of-day greeting, the signed-in admin's name, today's date.
+  - **Needs attention** panel: open unknown-person alerts, overdue books, new student reports; each is tappable (alerts go to Gate & Security, overdue to Library, reports to **Library > Reports**). When there is nothing to do it shows a green "All clear".
+  - **Quick actions:** Students, Library, Security, Camera.
+  - **Grouped stat cards:** Campus today (attendance, gate entries, total students, unknown alerts), Library (books, issued, **overdue, locked** - new), Transport (bus status shown in full). Cards are fixed height with a tinted icon, large number and label, so text cannot overflow; all are tappable.
+  - A failed load now shows a plain message with Retry instead of raw error text. Optional data (library counts, reports, user name) never blocks the page if it fails to load.
+- **Drawer:** branded header (logo, SecureCampus, admin name, email, "Administrator").
+- **Navigation:** new `adminLibraryTabProvider` lets the dashboard open Library on its Reports tab; the Library page reads it once and resets it.
+- **Files:** mobile/lib/features/admin/{admin_dashboard_screen,admin_home_shell,admin_library_screen}.dart, mobile/lib/providers/admin_navigation_provider.dart, mobile/test/admin_dashboard_test.dart
+- **Verified by:**
+  - `flutter test` **53/53**. The rewritten dashboard tests run at phone size (360 x 780) and cover: all labels and groups present; no overflow with a long bus status and the full status shown; Needs attention items with correct wording; All clear state; attention items and every stat card open the right section; "new student reports" opens the Reports tab; quick actions; the plain error message with Retry.
+  - `flutter analyze` 0 errors.
+  - **On the phone (SM-A305F, screenshot):** banner, Needs attention (picked up a real student report and the 2 open alerts), quick actions and the Campus today cards render correctly with no overflow.
+- **Not verified on the phone:** the Library and Transport sections lower on the page and the new drawer header (the screen turned off before they were scrolled into view); covered by the tests above.
+
 ### 2026-10-14 — Locking confirmed working; Admin > Library gets a Reports tab
 - **Rules published:** the new Firestore rules were published by the project owner. `python scripts/check_live_rules.py` now returns HTTP 200 for `issueReports` and `lockHistory` ("The new rules are PUBLISHED"). Locking and unlocking a book work on the phone (confirmed by the user).
 - **Change:** the Admin dashboard's **Library** page now has two tabs, **Catalog** (the existing book list, add book, Locked filter, lock/unlock) and **Reports** (the same view the librarian sees: Issued now / Overdue / Locked / New reports summary, and the students' "I did not borrow this book" reports, which the admin can mark resolved or reopen). The Reports tab shows a badge with the number of new reports.
