@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-14 — Admin dashboard cards are tappable
+- **Type:** feature (UX)
+- **Areas:** mobile
+- **What changed:** Each Admin dashboard stat card now opens its section: Total Students to Students; Library Books and Issued Books to Library; Bus Status to Bus and Stops; Today's Attendance, Today's Gate Entries and Unknown Alerts to Gate and Security. The selected Admin section moved from local state into a shared provider so cards can switch it.
+- **Files:** mobile/lib/providers/admin_navigation_provider.dart, mobile/lib/features/admin/admin_dashboard_screen.dart, mobile/lib/features/admin/admin_home_shell.dart, mobile/test/admin_dashboard_test.dart
+- **Verified by:** `flutter test` 11/11 (new test taps all seven cards and checks the section); `flutter analyze` 0 errors; debug APK builds.
+- **Not verified:** on the phone. Installing the new APK failed with INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature differs from the copy already on the phone); an uninstall is needed first.
+- **Notes:** Other portals (Student, Security, Librarian, Driver) were not changed; tell me which other items should be tappable.
+
 ### 2026-10-13 — Flutter SDK switched to 3.47.7; Android debug APK builds again (A1.13, I-32)
 - **Type:** infra / fix
 - **Areas:** build environment (outside the repo), mobile

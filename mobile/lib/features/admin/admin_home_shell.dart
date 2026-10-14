@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../providers/admin_navigation_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'admin_accounts_screen.dart';
 import 'admin_bus_screen.dart';
@@ -28,43 +29,76 @@ class AdminHomeShell extends ConsumerStatefulWidget {
 }
 
 class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
-  int _selected = 0;
-
   static const _sections = [
-    _AdminSection('Dashboard', Icons.dashboard_outlined, AdminDashboardScreen()),
+    _AdminSection(
+      'Dashboard',
+      Icons.dashboard_outlined,
+      AdminDashboardScreen(),
+    ),
     _AdminSection('Students', Icons.school_outlined, AdminStudentsScreen()),
     _AdminSection('Courses', Icons.menu_book_outlined, AdminCoursesScreen()),
-    _AdminSection('Camera', Icons.videocam_outlined, AdminCameraControlScreen()),
-    _AdminSection('Library', Icons.local_library_outlined, AdminLibraryScreen()),
-    _AdminSection('Bus & Stops', Icons.directions_bus_filled_outlined, AdminBusScreen()),
-    _AdminSection('Gate & Security', Icons.shield_outlined, AdminGateSecurityScreen()),
+    _AdminSection(
+      'Camera',
+      Icons.videocam_outlined,
+      AdminCameraControlScreen(),
+    ),
+    _AdminSection(
+      'Library',
+      Icons.local_library_outlined,
+      AdminLibraryScreen(),
+    ),
+    _AdminSection(
+      'Bus & Stops',
+      Icons.directions_bus_filled_outlined,
+      AdminBusScreen(),
+    ),
+    _AdminSection(
+      'Gate & Security',
+      Icons.shield_outlined,
+      AdminGateSecurityScreen(),
+    ),
     _AdminSection('Lost Cards', Icons.badge_outlined, AdminLostCardsScreen()),
-    _AdminSection('Staff Accounts', Icons.people_outline, AdminAccountsScreen()),
+    _AdminSection(
+      'Staff Accounts',
+      Icons.people_outline,
+      AdminAccountsScreen(),
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 900;
+    final selected = ref.watch(adminSectionProvider);
 
     final drawerContent = NavigationDrawer(
-      selectedIndex: _selected,
+      selectedIndex: selected,
       onDestinationSelected: (i) {
-        setState(() => _selected = i);
+        ref.read(adminSectionProvider.notifier).state = i;
         if (!isWide) Navigator.of(context).pop();
       },
       children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(24, 24, 16, 12),
-          child: Text('SecureCampus Admin',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.navyText)),
+          child: Text(
+            'SecureCampus Admin',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              color: AppColors.navyText,
+            ),
+          ),
         ),
-        for (final s in _sections) NavigationDrawerDestination(icon: Icon(s.icon), label: Text(s.label)),
+        for (final s in _sections)
+          NavigationDrawerDestination(icon: Icon(s.icon), label: Text(s.label)),
         const Divider(height: 24, indent: 16, endIndent: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ListTile(
             leading: const Icon(Icons.logout, color: AppColors.error),
-            title: const Text('Sign out', style: TextStyle(color: AppColors.error)),
+            title: const Text(
+              'Sign out',
+              style: TextStyle(color: AppColors.error),
+            ),
             onTap: () => ref.read(authServiceProvider).signOut(),
           ),
         ),
@@ -72,9 +106,9 @@ class _AdminHomeShellState extends ConsumerState<AdminHomeShell> {
     );
 
     final body = Scaffold(
-      appBar: AppBar(title: Text(_sections[_selected].label)),
+      appBar: AppBar(title: Text(_sections[selected].label)),
       drawer: isWide ? null : Drawer(child: drawerContent),
-      body: _sections[_selected].screen,
+      body: _sections[selected].screen,
     );
 
     if (!isWide) return body;
