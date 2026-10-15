@@ -28,6 +28,16 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-15 — Driver/bus module, step 2: Admin sets seats, campus and route order; a full bus blocks assignment
+- **Admin > Bus now has a "Seats & Campus" card:** set the bus seat count (1-200; shows "Seats 40 · Assigned 24 · Free 16", or "seat count not set" until entered) and the campus name/latitude/longitude (stored in `config/transport`; needed for to-campus / from-campus trips).
+- **Route order:** every stop is numbered and has up/down arrows; the new order is written in one batch and old gaps/duplicates are renumbered 1..n.
+- **Over-capacity is blocked:** assigning a student to a full bus is refused with a plain message ("This bus is full: all N seats are already assigned...") and the dialog stays open. The check is in the repository using fresh data (not only in the screen). Moving a student who already has a seat does not need a free seat. If no seat count is set yet there is no limit.
+- **Wording:** the remove-assignment dialog now says "20- and 10-minute arrival alerts".
+- **Rules:** new `config/{doc}` rule (signed-in read, Admin write). **Owner must publish the updated `firebase/firestore.rules`.**
+- **Files:** mobile/lib/repositories/admin_repository.dart, mobile/lib/providers/admin_providers.dart, mobile/lib/features/admin/admin_bus_screen.dart, firebase/firestore.rules, mobile/test/admin_bus_test.dart, firebase/rules-tests/firestore.rules.test.mjs
+- **Verified by:** `flutter test` **135/135** (6 new screen tests: seats/campus display, seat-count save and rejection, reorder arrows and end-stop limits, full-bus message); Firestore rules **15/15**; `flutter analyze` 0 errors.
+- **Not verified:** on a phone; the repository's full-bus check against real Firestore (only the screen with a fake repository and the pure logic are tested).
+
 ### 2026-10-14 — Driver/bus module, step 1a + 2a: lost-GPS protection and seat/route rules (pure logic)
 - **Flaw found in my own earlier work:** `bus_eta` did not look at how old the driver's location was, so a driver phone that died or lost GPS mid-trip still looked "live" and students kept seeing a stale status.
 - **Fix:** locations older than `LOCATION_STALE_SECONDS` (180 s) are ignored: no alerts, and student statuses are cleared once (`is_stale()` in `bus_eta/app/service.py`).

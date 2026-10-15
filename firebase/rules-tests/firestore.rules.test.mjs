@@ -157,3 +157,13 @@ test('fcmToken updates still work for the user and admin can still edit users', 
   await assertSucceeds(updateDoc(doc(as('stu1'), 'users/stu1'), { fcmToken: 'abc' }));
   await assertSucceeds(updateDoc(doc(as('admin1'), 'users/stu1'), { active: false }));
 });
+
+// ---------------------------------------------------------------- transport config
+test('everyone signed in reads the campus location; only the admin writes it', async () => {
+  const campus = { campusName: 'CUI Attock', campusLat: 33.77, campusLng: 72.36 };
+  await assertSucceeds(setDoc(doc(as('admin1'), 'config/transport'), campus));
+  await assertSucceeds(getDoc(doc(as('stu1'), 'config/transport')));
+  await assertFails(setDoc(doc(as('stu1'), 'config/transport'), campus));
+  await assertFails(setDoc(doc(as('lib1'), 'config/transport'), campus));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'config/transport')));
+});

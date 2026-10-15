@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/admin_models.dart';
 import '../models/course_model.dart';
 import '../models/student_model.dart';
+import '../models/transport_models.dart';
 import '../repositories/admin_repository.dart';
 import '../services/backend_api_service.dart';
 
@@ -36,6 +37,14 @@ final busStopsProvider = StreamProvider.autoDispose<List<BusStopModel>>((ref) {
 
 final busAssignmentsProvider = StreamProvider.autoDispose<List<AdminBusAssignmentModel>>((ref) {
   return ref.watch(adminRepositoryProvider).watchBusAssignments();
+});
+
+final busInfoProvider = StreamProvider.autoDispose.family<BusInfo, String>((ref, busId) {
+  return ref.watch(adminRepositoryProvider).watchBus(busId);
+});
+
+final campusLocationProvider = StreamProvider.autoDispose<CampusLocation?>((ref) {
+  return ref.watch(adminRepositoryProvider).watchCampus();
 });
 
 /// Live driver GPS for the Admin map - see admin_bus_screen.dart.
