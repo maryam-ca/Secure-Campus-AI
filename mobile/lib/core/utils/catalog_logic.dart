@@ -1,5 +1,6 @@
 import '../../models/admin_models.dart';
 import 'issue_search.dart';
+import 'student_search.dart';
 
 /// Catalog sub-tabs for the librarian.
 enum CatalogFilter { all, available, issued, overdue, locked }
@@ -98,4 +99,32 @@ List<BookModel> booksForFilter(List<BookModel> books, CatalogFilter f, String qu
 List<LibrarianIssueRow> loansForFilter(List<LibrarianIssueRow> loans, CatalogFilter f, String query) {
   final searched = searchIssues(loans, query);
   return f == CatalogFilter.overdue ? searched.where((l) => l.isOverdue).toList() : searched;
+}
+
+/// Books whose ID CONTAINS what was typed (any part, case/dashes/spaces
+/// ignored: "001", "book 1", "bk-0") or whose title or author contains it.
+/// Works for any ID format, old or new. Sorted by ID. Fewer than
+/// [studentSearchMinChars] characters returns nothing.
+List<BookModel> searchBooks(List<BookModel> all, String query) {
+  final text = query.trim().toLowerCase();
+  final id = normalizeRegNo(query);
+  if (id.length < studentSearchMinChars && text.length < studentSearchMinChars) return const [];
+
+  return all.where((b) {
+    final idHit = id.length >= studentSearchMinChars && normalizeRegNo(b.id).contains(id);
+    final textHit = text.length >= studentSearchMinChars &&
+        (b.title.toLowerCase().contains(text) || b.author.toLowerCase().contains(text));
+    return idHit || textHit;
+  }).toList()
+    ..sort((a, b) => a.id.compareTo(b.id));
+}
+
+/// The one book a scanned or fully typed code means, ignoring case, dashes
+/// and spaces ("book-001" finds "BOOK-001"). Null if none, or if it is
+/// ambiguous (two IDs that differ only by punctuation).
+BookModel? bookForCode(List<BookModel> all, String code) {
+  final n = normalizeRegNo(code);
+  if (n.isEmpty) return null;
+  final hits = all.where((b) => normalizeRegNo(b.id) == n).toList();
+  return hits.length == 1 ? hits.first : null;
 }

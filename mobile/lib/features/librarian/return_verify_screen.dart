@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/catalog_logic.dart';
 import '../../core/utils/issue_search.dart';
 import '../../models/admin_models.dart';
 import '../../providers/librarian_providers.dart';
@@ -48,14 +49,19 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
     // Wrong book: say which one it is, so the librarian can find the right one.
     String scannedName = code.trim();
     try {
-      final other = await ref.read(librarianRepositoryProvider).fetchBookById(code.trim());
+      final other = await ref
+          .read(librarianRepositoryProvider)
+          .fetchBookById(code.trim());
       if (other != null) scannedName = '"${other.title}" (${other.id})';
     } catch (_) {
       // keep the raw code
     }
     if (!mounted) return;
-    setState(() => _error = 'Wrong book. You scanned $scannedName, but this return is for '
-        '"${widget.issue.bookTitle}" (${widget.issue.bookId}).');
+    setState(
+      () => _error =
+          'Wrong book. You scanned $scannedName, but this return is for '
+          '"${widget.issue.bookTitle}" (${widget.issue.bookId}).',
+    );
     // brief pause so the same wrong QR is not re-processed every frame
     await Future<void>.delayed(const Duration(seconds: 2));
     _checking = false;
@@ -69,8 +75,11 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
     if (typed == null || !mounted) return;
 
     if (!bookCodeMatches(typed, widget.issue.bookId)) {
-      setState(() => _error = 'Book ID "$typed" does not match this return '
-          '("${widget.issue.bookTitle}", ${widget.issue.bookId}).');
+      setState(
+        () => _error =
+            'Book ID "$typed" does not match this return '
+            '("${widget.issue.bookTitle}", ${widget.issue.bookId}).',
+      );
       return;
     }
 
@@ -79,15 +88,24 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirm return'),
-        content: Text('Return "${issue.bookTitle}" (${issue.bookId}) from ${issue.studentName} '
-            '(${issue.registrationNumber})?\n\nThis return will be recorded as entered manually.'),
+        content: Text(
+          'Return "${issue.bookTitle}" (${issue.bookId}) from ${issue.studentName} '
+          '(${issue.registrationNumber})?\n\nThis return will be recorded as entered manually.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Return book')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Return book'),
+          ),
         ],
       ),
     );
-    if (confirmed == true && mounted) Navigator.of(context).pop(ReturnMethod.manual);
+    if (confirmed == true && mounted)
+      Navigator.of(context).pop(ReturnMethod.manual);
   }
 
   @override
@@ -127,10 +145,21 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(issue.bookTitle, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text(
+                    issue.bookTitle,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('${issue.bookId} · ${issue.studentName} (${issue.registrationNumber}) · due $due',
-                      style: const TextStyle(color: AppColors.bodyText, fontSize: 12.5)),
+                  Text(
+                    '${issue.bookId} · ${issue.studentName} (${issue.registrationNumber}) · due $due',
+                    style: const TextStyle(
+                      color: AppColors.bodyText,
+                      fontSize: 12.5,
+                    ),
+                  ),
                   if (_error != null) ...[
                     const SizedBox(height: 10),
                     Container(
@@ -140,7 +169,13 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
                         color: AppColors.error.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(_error!, style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 8),
@@ -159,14 +194,15 @@ class _ReturnVerifyScreenState extends ConsumerState<ReturnVerifyScreen> {
   }
 }
 
-class _ManualBookIdDialog extends StatefulWidget {
+class _ManualBookIdDialog extends ConsumerStatefulWidget {
   const _ManualBookIdDialog();
 
   @override
-  State<_ManualBookIdDialog> createState() => _ManualBookIdDialogState();
+  ConsumerState<_ManualBookIdDialog> createState() =>
+      _ManualBookIdDialogState();
 }
 
-class _ManualBookIdDialogState extends State<_ManualBookIdDialog> {
+class _ManualBookIdDialogState extends ConsumerState<_ManualBookIdDialog> {
   final _controller = TextEditingController();
 
   @override
@@ -177,18 +213,58 @@ class _ManualBookIdDialogState extends State<_ManualBookIdDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final catalog =
+        ref.watch(librarianBooksProvider).valueOrNull ?? const <BookModel>[];
+    final hits = searchBooks(catalog, _controller.text);
     return AlertDialog(
       title: const Text('Enter the book ID'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.characters,
-        decoration: const InputDecoration(labelText: 'Book ID (printed on the book)', hintText: 'BOOK-001'),
-        onSubmitted: (v) => Navigator.pop(context, v.trim()),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Part of the Book ID or title',
+                helperText: 'Pick the book from the list, or type the full ID.',
+              ),
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (v) => Navigator.pop(context, v.trim()),
+            ),
+            if (hits.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ListView(
+                    key: const Key('return-book-suggestions'),
+                    shrinkWrap: true,
+                    children: [
+                      for (final b in hits.take(20))
+                        ListTile(
+                          dense: true,
+                          title: Text(b.title, overflow: TextOverflow.ellipsis),
+                          subtitle: Text(b.id),
+                          onTap: () => Navigator.pop(context, b.id),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: const Text('Check')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Check'),
+        ),
       ],
     );
   }

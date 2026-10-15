@@ -28,6 +28,15 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-15 — Library: manual book entry accepts part of any ID format (issue and return)
+- **Problem:** typing a book ID by hand only worked if the full ID was typed exactly (and the hint said `BOOK-001`, the old format). Typing a few letters/digits of the ID found nothing, unlike the student search.
+- **Fix:** on the librarian Issue/Return screen, typing part of the Book ID, title or author (2+ characters, case/dashes/spaces ignored, any ID format) lists the matching books with their full ID and status (Available / Issued / Locked); the librarian taps the right one. A full code typed or scanned is matched ignoring case/dashes/spaces ("book-001" finds "BOOK-001") before falling back to an exact lookup. The return-verification "Enter the book ID" dialog has the same pick-from-list; the picked ID must still equal the loan's book, otherwise "Wrong book".
+- **Safety:** a partial code never picks a book automatically, and two IDs that differ only by punctuation match nothing rather than the wrong book.
+- **Files:** mobile/lib/core/utils/catalog_logic.dart (`searchBooks`, `bookForCode`), mobile/lib/features/librarian/{librarian_scan_screen,return_verify_screen}.dart, mobile/test/book_search_test.dart
+- **Note:** `dart format` was run on the two screens, so their diff is larger than the real change.
+- **Verified by:** `flutter test` **143/143** (8 new); `flutter analyze` 0 errors.
+- **Not verified:** on the phone; the exact IDs you see in the app were not checked against Firestore (search works with any format).
+
 ### 2026-10-15 — Driver/bus module, step 2: Admin sets seats, campus and route order; a full bus blocks assignment
 - **Admin > Bus now has a "Seats & Campus" card:** set the bus seat count (1-200; shows "Seats 40 · Assigned 24 · Free 16", or "seat count not set" until entered) and the campus name/latitude/longitude (stored in `config/transport`; needed for to-campus / from-campus trips).
 - **Route order:** every stop is numbered and has up/down arrows; the new order is written in one batch and old gaps/duplicates are renumbered 1..n.
