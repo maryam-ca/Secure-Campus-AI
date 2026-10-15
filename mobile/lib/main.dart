@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,7 +42,17 @@ Future<void> main() async {
 
   // Must be registered before runApp() - see push_notification_service.dart
   // for why this exists (background/terminated FCM delivery).
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  //
+  // Not on the web: a browser has no Dart background isolate (it needs a
+  // JavaScript service worker instead), and registering here can fail and
+  // abort main() before runApp(), which shows as a blank white page.
+  if (!kIsWeb) {
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint('Background push handler not registered: $e');
+    }
+  }
 
   runApp(const ProviderScope(child: SecureCampusApp()));
 }

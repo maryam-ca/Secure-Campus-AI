@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-15 — Web (Chrome) blank page: guard the push background handler (UNVERIFIED fix)
+- **Symptom:** running the app in Chrome (to watch the driver as Admin on the PC) showed a blank page. Console showed all Firebase plugins initialising and then nothing; no error text.
+- **Likely cause:** `FirebaseMessaging.onBackgroundMessage(...)` is registered in `main()` before `runApp()`. A browser has no Dart background isolate (it needs a JavaScript service worker), so this can fail and abort `main()`, which gives a blank page.
+- **Change:** `mobile/lib/main.dart` registers it only when not on web and never lets a failure stop the app. Android/iOS behaviour is unchanged.
+- **Verified:** `flutter analyze` clean; the web build compiles.
+- **Not verified:** that Chrome now shows the login page (headless screenshots here cannot render Flutter's canvas, so I could not see it). If it is still blank, open Chrome DevTools (F12) > Console and send the first red error.
+- **Note:** a pasted `ERR_CONNECTION_REFUSED ... localhost:15213` console log was from a dev session I had stopped, not the original cause.
+
 ### 2026-10-15 — Driver/bus module, step 1: a driver trip that keeps working and cannot lie
 - **Keeps sharing with the screen off:** on Android the trip runs as a foreground service (a "SecureCampus trip is live" notification), with a GPS fix about every 10 seconds even when the bus stands still (before: only every 15 m of movement, no background protection). Manifest gained `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `WAKE_LOCK`.
 - **Cannot show a dead trip as live:**
