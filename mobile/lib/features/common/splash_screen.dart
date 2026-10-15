@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animated_shield_logo.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -12,15 +12,7 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.primaryBlue,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.shield_outlined, color: Colors.white, size: 36),
-            ),
+            const AnimatedShieldLogo(size: 84),
             const SizedBox(height: 20),
             Text('SecureCampus', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22)),
             const SizedBox(height: 24),

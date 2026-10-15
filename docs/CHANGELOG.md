@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-15 — One logo everywhere: Admin sidebar, splash, Android launch screen and app icon
+- **Problem:** the Admin sidebar and the in-app splash screen showed a plain stock shield icon, the Android launch screen was empty white, and the launcher icon was not the SecureCampus mark; the dashboard card and login used the real logo.
+- **Fix:** sidebar and splash now use the real logo (`AnimatedShieldLogo`). The logo was rendered to PNG and used for: the Android native launch screen (`drawable/splash_logo.png` centred on white, both `launch_background.xml`), the Android launcher icons (all five densities) and the web icons/favicon.
+- **Also fixed:** `student_home_test` used a fixed date, so it started failing once the real calendar passed it (`LibraryIssueModel.status` uses the real clock). It now uses the real current time. Not a product bug.
+- **Verified by:** `flutter test` **156/156**, `flutter analyze` 0 errors, debug APK builds with the new resources.
+- **Not verified:** how the launch screen and icon look on the phone (reinstall the app to see them; Android may cache the old launcher icon until reinstalled).
+
 ### 2026-10-15 — Web (Chrome) blank page: guard the push background handler (UNVERIFIED fix)
 - **Symptom:** running the app in Chrome (to watch the driver as Admin on the PC) showed a blank page. Console showed all Firebase plugins initialising and then nothing; no error text.
 - **Likely cause:** `FirebaseMessaging.onBackgroundMessage(...)` is registered in `main()` before `runApp()`. A browser has no Dart background isolate (it needs a JavaScript service worker), so this can fail and abort `main()`, which gives a blank page.

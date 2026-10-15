@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animated_shield_logo.dart';
 import '../../providers/admin_navigation_provider.dart';
 import '../../models/app_user.dart';
 import '../../providers/auth_provider.dart';
@@ -155,15 +156,8 @@ class _DrawerHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.shield_outlined, color: Colors.white, size: 24),
-              ),
+              // The real app logo, same as the dashboard card and login.
+              const AnimatedShieldLogo(size: 46, animate: false),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(

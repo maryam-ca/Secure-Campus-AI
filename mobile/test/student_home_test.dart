@@ -9,7 +9,9 @@ import 'package:securecampus/models/dashboard_models.dart';
 import 'package:securecampus/models/student_model.dart';
 import 'package:securecampus/providers/student_providers.dart';
 
-final _now = DateTime(2026, 10, 14, 12, 0);
+// Real clock, not a fixed date: LibraryIssueModel.status compares with DateTime.now(),
+// so a fixed date makes "due tomorrow" loans turn overdue as the calendar moves on.
+final _now = DateTime.now();
 
 BusAssignmentModel _bus({bool active = true, int? eta, Duration age = const Duration(seconds: 20)}) => BusAssignmentModel(
       busId: 'BUS-001',
