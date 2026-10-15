@@ -28,6 +28,19 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-15 — Driver/bus module, step 1: a driver trip that keeps working and cannot lie
+- **Keeps sharing with the screen off:** on Android the trip runs as a foreground service (a "SecureCampus trip is live" notification), with a GPS fix about every 10 seconds even when the bus stands still (before: only every 15 m of movement, no background protection). Manifest gained `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `WAKE_LOCK`.
+- **Cannot show a dead trip as live:**
+  - The database server is told to mark the trip ended if the phone drops off (`onDisconnect`: app killed, phone off, no signal), and the location timestamp is now the server's clock (`ServerValue.timestamp`), so a wrong phone clock cannot fake freshness. Together with the 180 s server-side staleness check in `bus_eta` this closes the "dead phone looks live" gap.
+  - If the app was closed during a trip, the next start ends the leftover trip and tells the driver.
+  - Signing out ends a live trip first (new `onBeforeSignOut` in `PortalScaffold`).
+  - A GPS fix that arrives after the trip ended can no longer re-mark it live.
+- **Driver screen:** trip timer, "last GPS update" (Just now / 12 s ago / 3 min ago) with a red warning after 45 s without a fix, plain-language errors instead of raw exception text (GPS off, permission blocked, no internet, server refused), stop dialog now says "20- and 10-minute bus alerts". A temporary error no longer ends the trip. Status rows no longer overflow on narrow phones.
+- **Bug fixed on the way:** the screen read the signed-in user once, so if it opened before the auth stream emitted it would sit on a spinner forever; it now waits for the user.
+- **Files:** mobile/lib/features/driver/driver_dashboard_screen.dart, mobile/lib/repositories/driver_repository.dart, mobile/lib/core/utils/driver_status.dart, mobile/lib/core/widgets/portal_scaffold.dart, mobile/android/app/src/main/AndroidManifest.xml, mobile/test/{driver_status_test,driver_dashboard_test}.dart
+- **Verified by:** `flutter test` **156/156** (13 new: freshness/timer/error wording, no-bus, leftover trip ended, GPS-off message, start arms auto-end and sends fixes, End Trip, stuck-GPS warning, friendly write error, sign-out ends trip); `flutter analyze` 0 errors; debug APK builds with the foreground-service settings.
+- **Not verified (needs the real phone):** the foreground notification and background/screen-off location, `onDisconnect` actually firing when the phone loses signal, and the Realtime Database rules accepting the server-timestamp writes (RTDB rules have no emulator test yet). Test: start a trip, lock the screen for 2 minutes, watch the Admin map move; then switch the phone to airplane mode and confirm the trip shows ended.
+
 ### 2026-10-15 — Library: manual book entry accepts part of any ID format (issue and return)
 - **Problem:** typing a book ID by hand only worked if the full ID was typed exactly (and the hint said `BOOK-001`, the old format). Typing a few letters/digits of the ID found nothing, unlike the student search.
 - **Fix:** on the librarian Issue/Return screen, typing part of the Book ID, title or author (2+ characters, case/dashes/spaces ignored, any ID format) lists the matching books with their full ID and status (Available / Issued / Locked); the librarian taps the right one. A full code typed or scanned is matched ignoring case/dashes/spaces ("book-001" finds "BOOK-001") before falling back to an exact lookup. The return-verification "Enter the book ID" dialog has the same pick-from-list; the picked ID must still equal the loan's book, otherwise "Wrong book".

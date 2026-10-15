@@ -14,6 +14,10 @@ class PortalScaffold extends ConsumerWidget {
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
 
+  /// Runs before signing out and is awaited (errors ignored), so a screen can
+  /// finish what it must, e.g. the driver ending a live trip.
+  final Future<void> Function()? onBeforeSignOut;
+
   const PortalScaffold({
     super.key,
     required this.title,
@@ -22,6 +26,7 @@ class PortalScaffold extends ConsumerWidget {
     this.actions,
     this.floatingActionButton,
     this.bottomNavigationBar,
+    this.onBeforeSignOut,
   });
 
   @override
@@ -55,7 +60,14 @@ class PortalScaffold extends ConsumerWidget {
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authServiceProvider).signOut(),
+            onPressed: () async {
+              try {
+                await onBeforeSignOut?.call();
+              } catch (_) {
+                // never block signing out
+              }
+              await ref.read(authServiceProvider).signOut();
+            },
           ),
           const SizedBox(width: 4),
         ],
