@@ -4,9 +4,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/bus_capacity.dart';
 import '../../core/widgets/confirm_dialog.dart';
 import '../../core/widgets/portal_scaffold.dart';
 import '../../models/student_model.dart';
+import '../../models/transport_models.dart';
 import '../../providers/admin_providers.dart';
 
 const _busId = 'BUS-001'; // spec §29 - exactly one bus
@@ -132,6 +134,49 @@ class AdminBusScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         SectionCard(
+          title: 'Seats & Campus',
+          icon: Icons.event_seat_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                key: const Key('seats-tile'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.event_seat_outlined, size: 20),
+                title: Text(seatSummary(
+                  capacity: ref.watch(busInfoProvider(_busId)).valueOrNull?.capacity,
+                  assigned: assignmentsAsync.valueOrNull?.length ?? 0,
+                )),
+                subtitle: const Text('A full bus cannot take more students.'),
+                trailing: TextButton(
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => _SeatsDialog(current: ref.read(busInfoProvider(_busId)).valueOrNull?.capacity),
+                  ),
+                  child: const Text('Set seats'),
+                ),
+              ),
+              Builder(builder: (context) {
+                final campus = ref.watch(campusLocationProvider).valueOrNull;
+                return ListTile(
+                  key: const Key('campus-tile'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.school_outlined, size: 20),
+                  title: Text(campus == null ? 'Campus location not set' : campus.name),
+                  subtitle: Text(campus == null
+                      ? 'Needed for to-campus and from-campus trips.'
+                      : '${campus.lat}, ${campus.lng}'),
+                  trailing: TextButton(
+                    onPressed: () => showDialog(context: context, builder: (_) => _CampusDialog(current: campus)),
+                    child: Text(campus == null ? 'Set' : 'Change'),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
           title: 'Bus Stops',
           icon: Icons.pin_drop_outlined,
           trailing: TextButton.icon(
@@ -145,14 +190,36 @@ class AdminBusScreen extends ConsumerWidget {
             data: (stops) => stops.isEmpty
                 ? const Text('No stops configured yet.')
                 : Column(
-                    children: stops
-                        .map((s) => ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.location_on_outlined, size: 18),
-                              title: Text(s.name),
-                              subtitle: Text('${s.lat}, ${s.lng}'),
-                            ))
-                        .toList(),
+                    children: [
+                      for (var i = 0; i < stops.length; i++)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(radius: 12, child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
+                          title: Text(stops[i].name),
+                          subtitle: Text('${stops[i].lat}, ${stops[i].lng}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                key: Key('stop-up-$i'),
+                                tooltip: 'Earlier on the route',
+                                icon: const Icon(Icons.arrow_upward, size: 18),
+                                onPressed: i == 0
+                                    ? null
+                                    : () => ref.read(adminRepositoryProvider).applyStopOrder(reorderedStops(stops, i, -1)),
+                              ),
+                              IconButton(
+                                key: Key('stop-down-$i'),
+                                tooltip: 'Later on the route',
+                                icon: const Icon(Icons.arrow_downward, size: 18),
+                                onPressed: i == stops.length - 1
+                                    ? null
+                                    : () => ref.read(adminRepositoryProvider).applyStopOrder(reorderedStops(stops, i, 1)),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
           ),
         ),
@@ -183,7 +250,7 @@ class AdminBusScreen extends ConsumerWidget {
                                     context,
                                     title: 'Remove bus assignment?',
                                     message: '${a.studentName} will no longer see this bus or get the '
-                                        '10-minute arrival notification for ${a.stopName}.',
+                                        '20- and 10-minute arrival alerts for ${a.stopName}.',
                                     confirmLabel: 'Remove',
                                   );
                                   if (confirmed) {
@@ -196,6 +263,100 @@ class AdminBusScreen extends ConsumerWidget {
                   ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _SeatsDialog extends ConsumerStatefulWidget {
+  final int? current;
+  const _SeatsDialog({this.current});
+
+  @override
+  ConsumerState<_SeatsDialog> createState() => _SeatsDialogState();
+}
+
+class _SeatsDialogState extends ConsumerState<_SeatsDialog> {
+  late final _seats = TextEditingController(text: widget.current?.toString() ?? '');
+  String? _error;
+
+  Future<void> _save() async {
+    final n = int.tryParse(_seats.text.trim());
+    if (n == null || n < 1 || n > 200) {
+      setState(() => _error = 'Enter a whole number from 1 to 200.');
+      return;
+    }
+    await ref.read(adminRepositoryProvider).setBusCapacity(_busId, n);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seating capacity'),
+      content: TextField(
+        key: const Key('seats-field'),
+        controller: _seats,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: 'Number of seats', errorText: _error),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _save, child: const Text('Save')),
+      ],
+    );
+  }
+}
+
+class _CampusDialog extends ConsumerStatefulWidget {
+  final CampusLocation? current;
+  const _CampusDialog({this.current});
+
+  @override
+  ConsumerState<_CampusDialog> createState() => _CampusDialogState();
+}
+
+class _CampusDialogState extends ConsumerState<_CampusDialog> {
+  late final _name = TextEditingController(text: widget.current?.name ?? '');
+  late final _lat = TextEditingController(text: widget.current?.lat.toString() ?? '');
+  late final _lng = TextEditingController(text: widget.current?.lng.toString() ?? '');
+  String? _error;
+
+  Future<void> _save() async {
+    final lat = double.tryParse(_lat.text.trim());
+    final lng = double.tryParse(_lng.text.trim());
+    if (_name.text.trim().isEmpty || lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) {
+      setState(() => _error = 'Enter a name and valid latitude (-90..90) and longitude (-180..180).');
+      return;
+    }
+    await ref.read(adminRepositoryProvider).setCampus(_name.text.trim(), lat, lng);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const decimal = TextInputType.numberWithOptions(decimal: true, signed: true);
+    return AlertDialog(
+      title: const Text('Campus location'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(controller: _name, decoration: const InputDecoration(labelText: 'Campus name')),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: TextField(controller: _lat, keyboardType: decimal, decoration: const InputDecoration(labelText: 'Latitude'))),
+            const SizedBox(width: 10),
+            Expanded(child: TextField(controller: _lng, keyboardType: decimal, decoration: const InputDecoration(labelText: 'Longitude'))),
+          ]),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: AppColors.error)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        ElevatedButton(onPressed: _save, child: const Text('Save')),
       ],
     );
   }
@@ -279,11 +440,15 @@ class _AssignStudentDialogState extends ConsumerState<_AssignStudentDialog> {
   StudentModel? _student;
   String? _stopId;
   String? _stopName;
+  String? _error;
   bool _submitting = false;
 
   Future<void> _submit() async {
     if (_student == null || _stopId == null) return;
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     try {
       await ref.read(adminRepositoryProvider).assignStudentToBus(
             studentId: _student!.uid,
@@ -293,6 +458,9 @@ class _AssignStudentDialogState extends ConsumerState<_AssignStudentDialog> {
             stopName: _stopName!,
           );
       if (mounted) Navigator.of(context).pop();
+    } on StateError catch (e) {
+      // Bus full: stay on the dialog and say why.
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -338,6 +506,10 @@ class _AssignStudentDialogState extends ConsumerState<_AssignStudentDialog> {
                 }),
               ),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, key: const Key('assign-error'), style: const TextStyle(color: AppColors.error)),
+            ],
           ],
         ),
       ),
