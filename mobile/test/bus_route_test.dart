@@ -1,41 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:securecampus/core/utils/bus_capacity.dart';
+import 'package:securecampus/core/utils/bus_route.dart';
 import 'package:securecampus/models/admin_models.dart';
 import 'package:securecampus/models/transport_models.dart';
 
 BusStopModel _stop(String id, int order) => BusStopModel(id: id, name: 'Stop $id', lat: 33.0, lng: 73.0, order: order);
 
 void main() {
-  group('cannotAssignReason', () {
-    test('a free seat means the student can be assigned', () {
-      expect(cannotAssignReason(capacity: 3, assignedStudentIds: ['a', 'b'], studentId: 'c'), isNull);
-    });
-
-    test('a full bus blocks a new student, with a clear message', () {
-      final why = cannotAssignReason(capacity: 2, assignedStudentIds: ['a', 'b'], studentId: 'c');
-      expect(why, contains('bus is full'));
-      expect(why, contains('2 seats'));
-    });
-
-    test('moving a student who already has a seat does not need a free seat', () {
-      expect(cannotAssignReason(capacity: 2, assignedStudentIds: ['a', 'b'], studentId: 'b'), isNull);
-    });
-
-    test('no capacity set means no limit yet', () {
-      expect(cannotAssignReason(capacity: null, assignedStudentIds: List.generate(500, (i) => 's$i'), studentId: 'x'), isNull);
-    });
-
-    test('duplicates in the list are counted once', () {
-      expect(cannotAssignReason(capacity: 2, assignedStudentIds: ['a', 'a', 'b'], studentId: 'c'), contains('full'));
-      expect(cannotAssignReason(capacity: 3, assignedStudentIds: ['a', 'a', 'b'], studentId: 'c'), isNull);
-    });
-  });
-
-  test('seatSummary', () {
-    expect(seatSummary(capacity: 40, assigned: 24), 'Seats 40 · Assigned 24 · Free 16');
-    expect(seatSummary(capacity: 40, assigned: 40), 'Seats 40 · Assigned 40 · Free 0');
-    expect(seatSummary(capacity: 40, assigned: 43), 'Seats 40 · Assigned 43 · OVER by 3');
-    expect(seatSummary(capacity: null, assigned: 5), '5 assigned · seat count not set');
+  test('renumberedAfterRemoving closes the gap and leaves earlier stops alone', () {
+    final stops = [_stop('A', 1), _stop('B', 2), _stop('C', 3), _stop('D', 4)];
+    expect(renumberedAfterRemoving(stops, 'B'), {'C': 2, 'D': 3});
+    expect(renumberedAfterRemoving(stops, 'D'), isEmpty);
+    expect(renumberedAfterRemoving(stops, 'A'), {'B': 1, 'C': 2, 'D': 3});
   });
 
   group('reorderedStops', () {
@@ -69,11 +44,6 @@ void main() {
   });
 
   group('transport models', () {
-    test('BusInfo reads capacity and tolerates a bus without one', () {
-      expect(BusInfo.fromMap('BUS-001', {'capacity': 40, 'driverUid': 'd1'}).capacity, 40);
-      expect(BusInfo.fromMap('BUS-001', {}).capacity, isNull);
-    });
-
     test('CampusLocation is null until both coordinates exist', () {
       expect(CampusLocation.fromMap(null), isNull);
       expect(CampusLocation.fromMap({'campusName': 'Main'}), isNull);

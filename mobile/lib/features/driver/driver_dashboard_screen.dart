@@ -319,7 +319,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                                                 context,
                                                 title: 'End this trip?',
                                                 message: 'Location sharing will stop and students will stop '
-                                                    'getting 20- and 10-minute bus alerts for this trip.',
+                                                    'getting the 10-minute bus alert for this trip.',
                                                 confirmLabel: 'End Trip',
                                               );
                                               if (confirmed) await _stopTrip();

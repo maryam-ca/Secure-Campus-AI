@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../core/utils/bus_capacity.dart';
+import '../../core/utils/bus_route.dart';
+import '../../core/utils/save_error.dart';
+import '../../core/widgets/confirm_dialog.dart';
 import '../../core/widgets/portal_scaffold.dart';
+import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
 
 /// Admin > Transport > Stops: the bus route, stop by stop, in the order the
@@ -11,9 +14,44 @@ import '../../providers/admin_providers.dart';
 class AdminStopsScreen extends ConsumerWidget {
   const AdminStopsScreen({super.key});
 
+  /// Deletes a stop after confirming. A stop that students are assigned to
+  /// cannot be deleted: they would be left with a stop that does not exist.
+  Future<void> _deleteStop(BuildContext context, WidgetRef ref, List<BusStopModel> stops, BusStopModel stop) async {
+    final riders = (ref.read(busAssignmentsProvider).valueOrNull ?? const <AdminBusAssignmentModel>[])
+        .where((a) => a.stopId == stop.id)
+        .length;
+    if (riders > 0) {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Cannot delete this stop'),
+          content: Text('$riders student${riders == 1 ? ' is' : 's are'} assigned to "${stop.name}". '
+              'Remove or move their bus assignments first (Transport > Buses).'),
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
+        ),
+      );
+      return;
+    }
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Delete "${stop.name}"?',
+      message: 'The stop is removed from the route and the stops after it move up one place.',
+      confirmLabel: 'Delete',
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(adminRepositoryProvider).deleteBusStop(stop.id, renumberedAfterRemoving(stops, stop.id));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(saveFailureMessage(e))));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stopsAsync = ref.watch(busStopsProvider);
+    ref.watch(busAssignmentsProvider); // kept loaded so Delete knows which stops have riders
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -91,6 +129,12 @@ class AdminStopsScreen extends ConsumerWidget {
                                     ? null
                                     : () => ref.read(adminRepositoryProvider).applyStopOrder(reorderedStops(stops, i, 1)),
                               ),
+                              IconButton(
+                                key: Key('stop-delete-$i'),
+                                tooltip: 'Delete this stop',
+                                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                                onPressed: () => _deleteStop(context, ref, stops, stops[i]),
+                              ),
                             ],
                           ),
                         ),
@@ -127,18 +171,27 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
   final _lng = TextEditingController();
   final _order = TextEditingController(text: '1');
   bool _submitting = false;
+  String? _error;
 
   Future<void> _submit() async {
     final lat = double.tryParse(_lat.text.trim());
     final lng = double.tryParse(_lng.text.trim());
-    if (_id.text.trim().isEmpty || _name.text.trim().isEmpty || lat == null || lng == null) return;
+    if (_id.text.trim().isEmpty || _name.text.trim().isEmpty || lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) {
+      setState(() => _error = 'Enter an ID, a name, and a valid latitude (-90 to 90) and longitude (-180 to 180).');
+      return;
+    }
 
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     try {
       await ref.read(adminRepositoryProvider).upsertBusStop(
             _id.text.trim(), _name.text.trim(), lat, lng, int.tryParse(_order.text.trim()) ?? 1,
           );
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) setState(() => _error = saveFailureMessage(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -164,6 +217,10 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
             ]),
             const SizedBox(height: 10),
             TextField(controller: _order, decoration: const InputDecoration(labelText: 'Route order (1, 2, 3...)'), keyboardType: TextInputType.number),
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(_error!, key: const Key('stop-save-error'), style: const TextStyle(color: AppColors.error)),
+            ],
           ],
         ),
       ),

@@ -28,6 +28,22 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-17 — Bus: seat count removed (not part of the FYP); campus location only
+- **Type:** refactor
+- **Areas:** mobile
+- **What changed:** Removed the seating-capacity feature: the "Set seats" tile and dialog, the "bus is full" block when assigning a student, `BusInfo` / `busInfoProvider` / `setBusCapacity` / `watchBus`, and the seat arithmetic. Admin > Transport > Buses now has a "Campus Location" card only. The campus dialog and the assign dialog show a plain message when a save is refused. `core/utils/bus_capacity.dart` became `bus_route.dart` (route order only).
+- **Files:** mobile/lib/features/admin/admin_bus_screen.dart, admin_nav.dart, admin_stops_screen.dart, repositories/admin_repository.dart, providers/admin_providers.dart, models/transport_models.dart, core/utils/bus_route.dart, test/admin_bus_test.dart, test/bus_route_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (178 passed). Not tried against live Firebase.
+- **Notes:** Any `capacity` value already stored in Firestore `bus/{busId}` is simply ignored. The `bus` rules stay because the driver lookup still reads that collection. Supersedes the 2026-10-15 seat-count entry.
+
+### 2026-10-17 — Bus: back to ONE alert, 10 minutes before (20-minute alert removed)
+- **Type:** fix
+- **Areas:** bus_eta, mobile
+- **What changed:** Students now get a single "Bus Arriving Soon" alert when the bus is about 10 minutes from their stop, once per trip, as in the approved proposal. The 20-minute "Get Ready" alert and its setting `ALERT_FIRST_MINUTES` are removed. The student app no longer shows a 20-minute "get ready" status; the driver and admin dialogs say "10-minute alert". Supersedes the 2026-10-13 two-reminder entry.
+- **Files:** bus_eta/app/config.py, service.py, firebase_client.py, tests/test_service.py; mobile/lib/models/dashboard_models.dart, features/student/widgets/bus_assignment_section.dart, student_home_section.dart, features/driver/driver_dashboard_screen.dart, features/admin/admin_bus_screen.dart, test/student_home_test.dart
+- **Verified by:** unit tests only (see the test runs for this change). Not verified with a real driver GPS trip or push delivery.
+- **Notes:** Old `BUS_20_MIN` notifications already stored keep their bus icon in the Alerts list. The `bus_eta` service must be restarted to stop sending the 20-minute alert.
+
 ### 2026-10-17 — Security: live alert badges; Security can no longer resolve alerts
 - **Type:** fix
 - **Areas:** mobile, firebase

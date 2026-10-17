@@ -167,3 +167,68 @@ test('everyone signed in reads the campus location; only the admin writes it', a
   await assertFails(setDoc(doc(as('lib1'), 'config/transport'), campus));
   await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'config/transport')));
 });
+
+// ---------------------------------------------------------------- campus + stop locations
+test('the campus needs a name and real coordinates; Attock saves, nonsense does not', async () => {
+  const admin = as('admin1');
+  await assertSucceeds(setDoc(doc(admin, 'config/transport'),
+    { campusName: 'COMSATS University Islamabad, Attock Campus', campusLat: 33.78099, campusLng: 72.35105 }, { merge: true }));
+  await assertFails(setDoc(doc(admin, 'config/transport'), { campusName: '', campusLat: 33.78, campusLng: 72.35 }));
+  await assertFails(setDoc(doc(admin, 'config/transport'), { campusName: 'X', campusLat: 133.78, campusLng: 72.35 }));
+  await assertFails(setDoc(doc(admin, 'config/transport'), { campusName: 'X', campusLat: 33.78, campusLng: 272.35 }));
+  await assertFails(setDoc(doc(admin, 'config/transport'), { campusName: 'X', campusLat: '33.78', campusLng: 72.35 }));
+});
+
+test('only the admin adds, moves or removes a bus stop, with real coordinates', async () => {
+  const stop = { name: 'Stop A', lat: 33.77, lng: 72.36, order: 1 };
+  await assertSucceeds(setDoc(doc(as('admin1'), 'busStops/S1'), stop));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'busStops/S1'), { order: 2 })); // reordering the route
+  await assertSucceeds(getDoc(doc(as('stu1'), 'busStops/S1')));
+  await assertFails(setDoc(doc(as('stu1'), 'busStops/S2'), stop));
+  await assertFails(setDoc(doc(as('admin1'), 'busStops/S3'), { ...stop, lat: 200 }));
+  await assertFails(setDoc(doc(as('admin1'), 'busStops/S4'), { ...stop, name: '' }));
+  await assertFails(setDoc(doc(as('admin1'), 'busStops/S5'), { name: 'No coords', order: 1 }));
+  await assertFails(deleteDoc(doc(as('stu1'), 'busStops/S1')));
+  await assertSucceeds(deleteDoc(doc(as('admin1'), 'busStops/S1')));
+});
+
+// ---------------------------------------------------------------- found-card reports + alerts
+const foundReport = (over = {}) => ({
+  studentName: 'Ayesha Khan', registrationNumber: 'FA23-BSE-001', location: 'Library',
+  description: '', notified: false, status: 'OPEN', createdAt: serverTimestamp(), ...over,
+});
+
+test('anyone signed in can file an OPEN report with a name and number; nothing else', async () => {
+  const finder = env.authenticatedContext('finder1').firestore(); // anonymous-style session, no users doc
+  await assertSucceeds(addDoc(collection(finder, 'lostCardReports'), foundReport()));
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ studentName: '' })));
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ registrationNumber: '' })));
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ status: 'RESOLVED' })));
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ notified: true })));
+  await assertFails(addDoc(collection(env.unauthenticatedContext().firestore(), 'lostCardReports'), foundReport()));
+});
+
+test('Admin and Security read reports; only Admin resolves or deletes; students and finders cannot read', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'lostCardReports/r1'), foundReport({ createdAt: new Date() }));
+  });
+  await assertSucceeds(getDoc(doc(as('admin1'), 'lostCardReports/r1')));
+  await assertSucceeds(getDoc(doc(as('sec1'), 'lostCardReports/r1')));
+  await assertFails(getDoc(doc(as('stu1'), 'lostCardReports/r1')));
+  await assertFails(getDoc(doc(as('lib1'), 'lostCardReports/r1')));
+
+  await assertFails(updateDoc(doc(as('sec1'), 'lostCardReports/r1'), { status: 'RESOLVED' }));
+  await assertFails(deleteDoc(doc(as('sec1'), 'lostCardReports/r1')));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'lostCardReports/r1'), { status: 'RESOLVED', resolvedAt: serverTimestamp() }));
+  await assertSucceeds(deleteDoc(doc(as('admin1'), 'lostCardReports/r1')));
+});
+
+test('Security reads unknown-person alerts but cannot resolve them; Admin can', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'securityAlerts/a1'), { status: 'NEW', cameraLocation: 'Main Gate' });
+  });
+  await assertSucceeds(getDoc(doc(as('sec1'), 'securityAlerts/a1')));
+  await assertFails(updateDoc(doc(as('sec1'), 'securityAlerts/a1'), { status: 'RESOLVED' }));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'securityAlerts/a1'), { status: 'RESOLVED' }));
+  await assertFails(getDoc(doc(as('stu1'), 'securityAlerts/a1')));
+});

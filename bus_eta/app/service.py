@@ -1,17 +1,13 @@
 """
 One polling cycle of the bus ETA job: read the driver's live location,
 and for every student assigned to this bus with a registered stop,
-compute ETA and send up to TWO in-app reminders per trip:
+compute ETA and send ONE in-app alert per trip: "Head to your stop", when the
+bus is about ALERT_THRESHOLD_MINUTES (10) away.
 
-  1. "Get ready"  - when the bus is about ALERT_FIRST_MINUTES (20) away.
-  2. "Head to your stop" - when it is about ALERT_THRESHOLD_MINUTES (10) away.
-
-Each stage is sent at most once per student per trip (dedupe fields
-`alertFirstTripId` / `alertFinalTripId` on the busAssignments doc; the
-legacy `lastAlertTripId` is still honoured as "final already sent").
+It is sent at most once per student per trip (dedupe field `alertFinalTripId`
+on the busAssignments doc; the legacy `lastAlertTripId` is still honoured).
 If the first reading for a student is already inside the 10-minute window
-(e.g. the driver started the trip late), only the final alert is sent -
-a "get ready" notice that late would be noise.
+(e.g. the driver started the trip late), the alert is sent at once.
 """
 
 from __future__ import annotations
@@ -26,7 +22,6 @@ from app.geo import estimate_eta_minutes
 
 log = logging.getLogger("bus_eta")
 
-FIRST = "first"
 FINAL = "final"
 
 # Firestore's free tier allows 20,000 writes a day, so a status is written only
@@ -56,16 +51,13 @@ def is_stale(updated_at_ms: float | None, now_ms: float, limit_seconds: float) -
     return (now_ms - updated_at_ms) / 1000.0 > limit_seconds
 
 
-def decide_alert(eta_minutes: float, first_sent: bool, final_sent: bool,
-                 first_threshold: float, final_threshold: float) -> str | None:
-    """Which alert (if any) to send now. Pure function so it can be unit
-    tested without Firebase."""
+def decide_alert(eta_minutes: float, final_sent: bool, final_threshold: float) -> str | None:
+    """Which alert (if any) to send now: the single 10-minute alert, once.
+    Pure function so it can be unit tested without Firebase."""
     if final_sent:
         return None
     if eta_minutes <= final_threshold:
         return FINAL
-    if eta_minutes <= first_threshold and not first_sent:
-        return FIRST
     return None
 
 
@@ -109,7 +101,6 @@ def run_once() -> int:
 
         trip = location.trip_id
         final_sent = trip in (assignment.get("alertFinalTripId"), assignment.get("lastAlertTripId"))
-        first_sent = assignment.get("alertFirstTripId") == trip
 
         eta_minutes, method = estimate_eta_minutes(
             origin=(location.lat, location.lng),
@@ -125,10 +116,9 @@ def run_once() -> int:
             firebase_client.update_trip_status(assignment["id"], True, shown_eta)
 
         if final_sent:
-            continue  # both reminders already sent; the status above keeps updating
+            continue  # the alert was already sent; the status above keeps updating
 
-        stage = decide_alert(eta_minutes, first_sent, final_sent,
-                             settings.ALERT_FIRST_MINUTES, settings.ALERT_THRESHOLD_MINUTES)
+        stage = decide_alert(eta_minutes, final_sent, settings.ALERT_THRESHOLD_MINUTES)
         if stage is None:
             continue
 

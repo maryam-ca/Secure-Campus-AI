@@ -55,10 +55,10 @@ class StudentHomeSection extends ConsumerWidget {
           text: '$dueSoon book${dueSoon == 1 ? '' : 's'} due within 2 days',
           onTap: () => onOpenTab(StudentTab.library),
         ),
-      if (trip != null && (trip.level == BusTripLevel.getReady || trip.level == BusTripLevel.headOut))
+      if (trip != null && trip.level == BusTripLevel.headOut)
         AttentionItem(
           icon: Icons.directions_bus_filled_outlined,
-          color: trip.level == BusTripLevel.headOut ? AppColors.success : AppColors.warning,
+          color: AppColors.success,
           text: 'Bus: ${trip.text}',
           onTap: () => onOpenTab(StudentTab.bus),
         ),
@@ -134,7 +134,6 @@ class StudentHomeSection extends ConsumerWidget {
           text: bus == null ? 'You are not assigned to a bus.' : trip!.text,
           color: switch (trip?.level) {
             BusTripLevel.headOut => AppColors.success,
-            BusTripLevel.getReady => AppColors.warning,
             BusTripLevel.onTheWay => AppColors.primaryBlue,
             _ => AppColors.bodyText,
           },

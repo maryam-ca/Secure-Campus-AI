@@ -201,7 +201,7 @@ to start locally for it day-to-day; redeploy with
 
 ```
 cd iris_ai   && PYTHONPATH=. pytest tests/ -v   # 7 tests, pipeline mechanics on synthetic images
-cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 5 tests, real haversine/ETA math incl. a known real-world distance
+cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 31 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
 cd .. && python scripts/generate_qr_codes.py    # regenerates + re-verifies all 5 QR codes
 cd functions && pip install -r requirements.txt --break-system-packages && python -c "import main"  # Cloud Function import-verifies
 ```
@@ -211,6 +211,75 @@ against the real phone, Flutter build/run, GPS, the Cloud Function
 actually firing on schedule) needs to be run and tested by you against
 your own project/hardware — see `docs/AUDIT_REPORT.md` "Device/Project-
 Dependent Items" for the exact list.
+
+### 6.1 Demonstrating the 10-minute bus alert (assessment)
+
+Each student gets **one** alert per trip, about 10 minutes before the bus
+reaches **their own stop** (`bus_eta/app/service.py`). The ETA is the
+straight-line distance from the bus to that stop divided by `AVG_BUS_SPEED_KMH`
+(25 km/h), unless `MAP_API_KEY` is set, in which case a routing API is used.
+
+**How the demo works.** The driver app, the Firebase writes, the `bus_eta`
+service, the ETA calculation and the student notification are all real. Only
+the GPS input is overridden: the browser's DevTools sends a test position
+instead of a real GPS fix. No fake data is written to the database. On a phone
+the same screen sends the real GPS. Say this plainly to the assessors.
+
+**Before you start**
+- Firestore rules published from `firebase/firestore.rules` (the campus,
+  stops and Security pages need them).
+- The campus and the stops are saved (Admin, Transport), and at least one
+  student is assigned to each stop you will test (Admin, Transport, Buses).
+- A driver account assigned to `BUS-001`, and a student login for a student
+  at the stop you will test.
+- `bus_eta` running. `GOOGLE_APPLICATION_CREDENTIALS` in `.env` is relative to
+  the project root, so when starting from `bus_eta/` give the full path:
+
+```
+cd bus_eta
+.venv\Scripts\activate
+$env:GOOGLE_APPLICATION_CREDENTIALS = "C:\full\path\to\secrets\serviceAccountKey.json"   # PowerShell
+python -m app.main
+```
+
+**Steps**
+1. Open three windows side by side: the driver (Chrome), the student (another
+   browser profile, on the Bus page), and the `bus_eta` terminal.
+2. In the driver's Chrome press F12 → the three-dot menu → More tools →
+   **Sensors** → Location → Other, and enter a test position (table below).
+3. Sign in as the driver and press **Start Trip**. Allow location if asked.
+4. Within about 30 seconds (the service polls every 20 s) the log shows
+   `final alert to student ... for stop <name>`. The student's Bus page changes
+   to "About N min from your stop - head to your pickup point now.", and the
+   Alerts page shows a "Bus Arriving Soon" notification.
+5. Students at other stops get nothing, because their stops are more than
+   10 minutes away.
+
+**Test positions** (about 3 km before the stop, roughly 7 minutes away)
+
+| Stop | Latitude | Longitude | Expected |
+|---|---|---|---|
+| Hassan Abdal | 33.8168742 | 72.6532 | ETA about 7.2 min, alert to the Hassan Abdal students only |
+| Attock City Junction | 33.7745100 | 72.3191 | ETA about 7.2 min, alert to the Attock students only |
+
+To test another stop, keep its latitude and subtract about 0.0325 from its
+longitude (3 km west at this latitude). Stops closer than 10 minutes to that
+point also alert, which is correct.
+
+**Repeat the demo.** The alert fires once per trip. Press **End Trip**, then
+**Start Trip** again (a new trip). When finished, press **End Trip** and set the
+DevTools Location back to "No override".
+
+**Optional: a real walk.** At 25 km/h a walker is "10 minutes away" only about
+4 km from the stop. For a walking demo set `AVG_BUS_SPEED_KMH=5` in `.env`
+(about 0.8 km) and restart `bus_eta`, say that you did, and set it back after.
+
+**Backup.** Record the demo once beforehand and keep a screenshot of the log
+line. The unit tests also prove the rule (`cd bus_eta && pytest tests/`).
+
+**Limits to state honestly.** The ETA is a straight-line estimate, not road
+routing, and it does not know which stops the bus has already passed. It has
+not been tried on a real bus trip.
 
 ## 7. Environment variables
 

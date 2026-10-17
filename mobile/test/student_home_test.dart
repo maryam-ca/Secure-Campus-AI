@@ -74,14 +74,14 @@ void main() {
       final stale = info(_bus(eta: 12, age: const Duration(minutes: 4)));
       expect(stale.level, BusTripLevel.idle);
       expect(stale.text, 'No trip in progress right now.');
-      expect(info(_bus(eta: 12, age: const Duration(minutes: 2))).level, BusTripLevel.getReady);
+      expect(info(_bus(eta: 12, age: const Duration(minutes: 2))).level, BusTripLevel.onTheWay);
     });
 
-    test('wording follows the 20 and 10 minute reminders', () {
+    test('wording follows the single 10 minute alert', () {
       expect(info(_bus(eta: 35)).level, BusTripLevel.onTheWay);
       expect(info(_bus(eta: 35)).text, 'On its way - about 35 min from your stop.');
-      expect(info(_bus(eta: 20)).level, BusTripLevel.getReady);
-      expect(info(_bus(eta: 15)).text, 'About 15 min from your stop - get ready.');
+      expect(info(_bus(eta: 20)).level, BusTripLevel.onTheWay); // no 20-minute stage any more
+      expect(info(_bus(eta: 15)).text, 'On its way - about 15 min from your stop.');
       expect(info(_bus(eta: 10)).level, BusTripLevel.headOut);
       expect(info(_bus(eta: 8)).text, 'About 8 min from your stop - head to your pickup point now.');
       expect(info(_bus(eta: 1)).text, 'Your bus is arriving now.');
@@ -100,7 +100,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(body: BusStatusBanner(assignment: _bus(eta: 15), clock: () => clock)),
       ));
-      expect(find.text('About 15 min from your stop - get ready.'), findsOneWidget);
+      expect(find.text('On its way - about 15 min from your stop.'), findsOneWidget);
 
       clock = _now.add(const Duration(minutes: 5)); // the service stopped refreshing it
       await tester.pump(const Duration(seconds: 31)); // the banner re-checks every 30 s

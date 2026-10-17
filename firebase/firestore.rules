@@ -34,6 +34,11 @@ service cloud.firestore {
     function isLibrarian() { return hasRole('librarian'); }
     function isDriver()    { return hasRole('driver'); }
 
+    // Map coordinates must be real numbers on the globe, so a typo cannot
+    // save a campus or stop that is off the map.
+    function validLat(v) { return v is number && v >= -90 && v <= 90; }
+    function validLng(v) { return v is number && v >= -180 && v <= 180; }
+
     // ---------------------------------------------------------------
     // users - each user reads their own account doc; only Admin can
     // list/write any user (account creation, deactivation, role mgmt).
@@ -236,15 +241,33 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Campus location etc. for the bus module: everyone signed in reads, Admin writes.
+    // The campus location (the trip destination / start) lives in
+    // config/transport as campusName, campusLat, campusLng. Everyone signed in
+    // reads it; only Admin writes it, and only with a name and real coordinates.
     match /config/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin()
+                   && (docId != 'transport'
+                       || (request.resource.data.campusName is string
+                           && request.resource.data.campusName.size() > 0
+                           && request.resource.data.campusName.size() <= 120
+                           && validLat(request.resource.data.campusLat)
+                           && validLng(request.resource.data.campusLng)));
     }
 
+    // Bus stops (name, lat, lng, order along the route). Everyone signed in
+    // reads them; only Admin adds, moves or removes one, and a stop must have
+    // a name, real coordinates and a route order.
     match /busStops/{stopId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin()
+                            && request.resource.data.name is string
+                            && request.resource.data.name.size() > 0
+                            && request.resource.data.name.size() <= 120
+                            && validLat(request.resource.data.lat)
+                            && validLng(request.resource.data.lng)
+                            && request.resource.data.order is number;
+      allow delete: if isAdmin();
     }
 
     match /busAssignments/{assignmentId} {

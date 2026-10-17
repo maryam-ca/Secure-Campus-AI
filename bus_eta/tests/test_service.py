@@ -5,22 +5,20 @@ from unittest.mock import MagicMock
 import pytest
 
 from app import service
-from app.service import FINAL, FIRST, decide_alert
+from app.service import FINAL, decide_alert
 
 
-@pytest.mark.parametrize("eta,first_sent,final_sent,expected", [
-    (30, False, False, None),     # too far: nothing yet
-    (20.0, False, False, FIRST),  # exactly 20 min: "get ready"
-    (15, False, False, FIRST),
-    (15, True, False, None),      # already told to get ready
-    (10.0, True, False, FINAL),   # exactly 10 min: final
-    (8, True, False, FINAL),
-    (8, False, False, FINAL),     # trip started late: skip "get ready", send final only
-    (5, True, True, None),        # both done: never repeat
-    (5, False, True, None),
+@pytest.mark.parametrize("eta,final_sent,expected", [
+    (30, False, None),     # too far: nothing
+    (20.0, False, None),   # no 20-minute alert any more
+    (15, False, None),
+    (10.0, False, FINAL),  # exactly 10 min: the one alert
+    (8, False, FINAL),     # trip started late: sent at once
+    (5, True, None),       # already sent: never repeat
+    (30, True, None),
 ])
-def test_decide_alert(eta, first_sent, final_sent, expected):
-    assert decide_alert(eta, first_sent, final_sent, 20, 10) == expected
+def test_decide_alert(eta, final_sent, expected):
+    assert decide_alert(eta, final_sent, 10) == expected
 
 
 def _setup(monkeypatch, eta, assignment):
@@ -34,17 +32,19 @@ def _setup(monkeypatch, eta, assignment):
     return fc
 
 
-def test_first_alert_then_final_alert_each_once(monkeypatch):
+def test_only_the_10_minute_alert_is_sent_and_only_once(monkeypatch):
     fc = _setup(monkeypatch, 18, {})
-    assert service.run_once() == 1
-    fc.notify_student_bus.assert_called_once_with("s1", "Block A", 18, FIRST)
-    fc.mark_alert_sent.assert_called_once_with("a1", "T1", FIRST)
+    assert service.run_once() == 0  # 18 min away: no 20-minute alert any more
+    fc.notify_student_bus.assert_not_called()
 
-    # same student, same trip, now 9 minutes away and the first alert is recorded
-    fc2 = _setup(monkeypatch, 9, {"alertFirstTripId": "T1"})
+    fc2 = _setup(monkeypatch, 9, {})
     assert service.run_once() == 1
     fc2.notify_student_bus.assert_called_once_with("s1", "Block A", 9, FINAL)
     fc2.mark_alert_sent.assert_called_once_with("a1", "T1", FINAL)
+
+    fc3 = _setup(monkeypatch, 6, {"alertFinalTripId": "T1"})  # same trip, already sent
+    assert service.run_once() == 0
+    fc3.notify_student_bus.assert_not_called()
 
 
 def test_nothing_sent_when_far_or_already_done(monkeypatch):
@@ -64,7 +64,7 @@ def test_legacy_last_alert_field_still_blocks_repeat(monkeypatch):
 
 
 def test_new_trip_alerts_again(monkeypatch):
-    fc = _setup(monkeypatch, 18, {"alertFirstTripId": "OLD", "alertFinalTripId": "OLD"})
+    fc = _setup(monkeypatch, 9, {"alertFinalTripId": "OLD"})
     assert service.run_once() == 1
     fc.notify_student_bus.assert_called_once()
 
@@ -175,3 +175,22 @@ def test_a_fresh_location_is_still_used(monkeypatch):
     fc = _stale_trip(monkeypatch, age_seconds=20)
     service.run_once()
     fc.update_trip_status.assert_called_once()
+
+
+# ---------------------------------------------------------------- each student's own stop
+def test_each_student_is_alerted_only_for_their_own_stop(monkeypatch):
+    fc = MagicMock()
+    fc.read_driver_location.return_value = SimpleNamespace(
+        trip_active=True, trip_id="T1", lat=1.0, lng=2.0, updated_at=time.time() * 1000)
+    fc.fetch_active_assignments_with_stops.return_value = [
+        {"id": "a-near", "studentId": "near", "stopName": "Near Stop", "stopLat": 10.0, "stopLng": 10.0},
+        {"id": "a-far", "studentId": "far", "stopName": "Far Stop", "stopLat": 50.0, "stopLng": 50.0},
+        {"id": "a-none", "studentId": "", "stopName": "No Student", "stopLat": 10.0, "stopLng": 10.0},
+    ]
+    monkeypatch.setattr(service, "firebase_client", fc)
+    # 8 minutes to the near stop, 40 to the far one: the ETA is worked out per stop
+    monkeypatch.setattr(service, "estimate_eta_minutes", lambda **kw: (8, "test") if kw["dest"] == (10.0, 10.0) else (40, "test"))
+
+    assert service.run_once() == 1
+    fc.notify_student_bus.assert_called_once_with("near", "Near Stop", 8, FINAL)
+    fc.mark_alert_sent.assert_called_once_with("a-near", "T1", FINAL)
