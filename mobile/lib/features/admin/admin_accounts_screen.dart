@@ -7,34 +7,16 @@ import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
 import '../../services/backend_api_service.dart';
 
-const _roles = ['security', 'librarian', 'driver'];
 const _roleLabels = {'security': 'Security Staff', 'librarian': 'Librarian', 'driver': 'Driver'};
 
+/// Accounts for one staff role. The sidebar has one page per role
+/// (User Management > Security / Librarian / Driver).
 class AdminAccountsScreen extends StatelessWidget {
-  const AdminAccountsScreen({super.key});
+  final String role; // 'security' | 'librarian' | 'driver'
+  const AdminAccountsScreen({super.key, required this.role});
 
   @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: _roles.length,
-      child: Column(
-        children: [
-          const Material(
-            color: AppColors.cardBackground,
-            child: TabBar(
-              labelColor: AppColors.primaryBlue,
-              unselectedLabelColor: AppColors.bodyText,
-              indicatorColor: AppColors.primaryBlue,
-              tabs: [Tab(text: 'Security'), Tab(text: 'Librarian'), Tab(text: 'Driver')],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(children: _roles.map((r) => _RoleAccountsTab(role: r)).toList()),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _RoleAccountsTab(role: role);
 }
 
 class _RoleAccountsTab extends ConsumerWidget {

@@ -28,6 +28,52 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-17 — Security: live alert badges; Security can no longer resolve alerts
+- **Type:** fix
+- **Areas:** mobile, firebase
+- **What changed:** The Security sidebar now shows live counts (new unknown-person alerts, open found-card reports), so an alert is visible in the app even if a phone push never arrives. The Resolve / Mark as new button is removed from Security's alert cards (status is shown only). firestore.rules: only Admin may update a securityAlerts status.
+- **Files:** mobile/lib/features/security/security_dashboard_screen.dart, firebase/firestore.rules, mobile/test/security_portal_test.dart
+- **Verified by:** flutter analyze, flutter test, iris_ai tests/test_alert_upload.py (alert creation calls notify_role for security). Not verified end to end: no camera, so no real unknown-person alert has been generated here. firestore.rules not deployed.
+- **Notes:** Admin's alert-resolving screen (Gate & Security) is locked under Phase 2 in the sidebar, so alerts cannot be resolved in the app until it is unlocked.
+
+### 2026-10-17 — Found-card reports: required, checked against student records, Admin-only resolve, Security view
+- **Type:** feature
+- **Areas:** mobile, firebase
+- **What changed:** The finder form now requires the name and registration number as printed on the card. Admin sees each report checked against the real student record (verified / name mismatch / no such student) and can notify the student only when both match. Only Admin can notify the student and resolve a report. Security has a read-only Lost Cards page: open reports, and resolved ones marked Resolved for 24 hours, then they disappear. Admin dashboard shows a "found-card reports to review" row. Student Courses page added; student Attendance moved under locked Phase 2.
+- **Files:** firebase/firestore.rules, mobile/lib/core/utils/lost_card_match.dart, models/admin_models.dart, repositories/admin_repository.dart, providers/admin_providers.dart, features/common/found_card_report_screen.dart, features/admin/admin_lost_cards_screen.dart, features/admin/admin_dashboard_screen.dart, features/security/security_dashboard_screen.dart, test/lost_card_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test. firestore.rules changed but NOT deployed or tested against a real project.
+- **Notes:** The finder is anonymous and cannot read student records, so the check is done on the Admin side, not at submit time. Deploy with `firebase deploy --only firestore:rules` or Security cannot read the reports.
+
+### 2026-10-17 — Transport split into Buses and Stops pages
+- **Type:** refactor
+- **Areas:** mobile
+- **What changed:** Admin > Transport now has Buses (live map, status, seats, campus, student assignments) and Stops (route shown in visit order with arrows between stops, reorder, add). Accordion sidebar: opening one module closes the other. Security portal: Book Reports removed; Recent Entries and Unknown-Person Alerts moved under a locked Phase 2 group.
+- **Files:** mobile/lib/features/admin/admin_stops_screen.dart, admin_bus_screen.dart, admin_nav.dart, core/widgets/portal_sidebar.dart, features/security/security_dashboard_screen.dart, tests
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (172 passed). Not yet run on a device.
+
+### 2026-10-17 — One shared layout for every role; logo returns Home; matching top bar
+- **Type:** refactor
+- **Areas:** mobile
+- **What changed:** The Admin shell moved to shared widgets (`core/widgets/portal_shell.dart`, `portal_sidebar.dart`, `portal_nav.dart`, `portal_module_page.dart`). Student, Librarian, Security and Driver now use the same sidebar, header bar, Home button and theme; each defines only its own menu. Bottom navigation bars and the Security top tabs are replaced by sidebar pages. Tapping the logo or "SecureCampus" in the sidebar returns to Home. The top bar and the sidebar header are the same solid blue (app-wide `appBarTheme`).
+- **Files:** mobile/lib/core/widgets/portal_*.dart, core/theme/app_theme.dart, features/admin/admin_nav.dart, admin_home_shell.dart, student/student_dashboard_screen.dart, librarian/librarian_home_screen.dart, security/security_dashboard_screen.dart, driver/driver_dashboard_screen.dart, plus tests
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (168 passed). Not yet run on a device.
+- **Notes:** On a phone, the sidebar opens from the menu button. All role features are unchanged; only the navigation frame changed.
+
+### 2026-10-17 — Admin module first pages, header bar, Home button, per-role staff pages
+- **Type:** feature
+- **Areas:** mobile
+- **What changed:** Clicking a main module in the sidebar opens its first page (cards for its sub-modules) and expands it; the arrow only expands or collapses. Every Admin page except the dashboard has a header bar (Home > Module > Page, clickable, plus sub-module chips) and a Home button in the app bar. Staff Accounts split into Security Staff, Librarians and Drivers pages. Settings listed under Phase 2 (locked).
+- **Files:** mobile/lib/features/admin/admin_module_page.dart, admin_nav.dart, admin_sidebar.dart, admin_home_shell.dart, admin_accounts_screen.dart, providers/admin_navigation_provider.dart, test/admin_shell_test.dart, test/admin_sidebar_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (167 passed). Not yet run on a device.
+
+### 2026-10-17 — Admin sidebar regrouped by phase (expand/collapse modules)
+- **Type:** refactor
+- **Areas:** mobile
+- **What changed:** Admin sidebar is now grouped main modules with expandable sub-modules (User Management, Academics, Library, Transport, Lost & Found). Camera, attendance and gate are under a greyed, non-clickable "Phase 2 - Under development" group. Every Admin page shares one title strip (breadcrumb + description). Dashboard shows Phase 1 numbers and greyed Phase 2 cards with no figures. The menu is data in `admin_nav.dart`; page ids are strings (`AdminSection`), `adminLibraryTabProvider` removed (Library > Reports is its own id).
+- **Files:** mobile/lib/features/admin/admin_nav.dart, admin_sidebar.dart, admin_home_shell.dart, admin_dashboard_screen.dart, admin_library_screen.dart, providers/admin_navigation_provider.dart, core/widgets/dashboard_widgets.dart, test/admin_sidebar_test.dart, test/admin_dashboard_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (162 passed). Not yet run on a device.
+- **Notes:** Camera/Gate screens still exist in code, just not in the menu. Other roles untouched. To enable a Phase 2 module: give its item a `screen` in `admin_nav.dart`.
+
 ### 2026-10-15 — One logo everywhere: Admin sidebar, splash, Android launch screen and app icon
 - **Problem:** the Admin sidebar and the in-app splash screen showed a plain stock shield icon, the Android launch screen was empty white, and the launcher icon was not the SecureCampus mark; the dashboard card and login used the real logo.
 - **Fix:** sidebar and splash now use the real logo (`AnimatedShieldLogo`). The logo was rendered to PNG and used for: the Android native launch screen (`drawable/splash_logo.png` centred on white, both `launch_background.xml`), the Android launcher icons (all five densities) and the web icons/favicon.

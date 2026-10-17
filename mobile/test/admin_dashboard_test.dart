@@ -107,18 +107,25 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
 }
 
 void main() {
-  testWidgets('shows the greeting and the five key numbers, with nothing repeated', (tester) async {
+  testWidgets('shows the greeting, the Phase 1 numbers and greyed-out Phase 2 cards, with nothing repeated', (tester) async {
     await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
     expect(find.textContaining('Campus Admin'), findsOneWidget);
     expect(find.byType(AnimatedShieldLogo), findsOneWidget); // the real app logo
     expect(find.text('SecureCampus'), findsOneWidget);
-    for (final label in ['Total Students', 'Attendance', 'Gate Entries', 'Library Books', 'Bus Status']) {
+    for (final label in ['Total Students', 'Library Books', 'Bus Status']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    // Phase 2 cards carry no number: nothing is invented for unbuilt features
+    expect(find.text('PHASE 2'), findsOneWidget);
+    expect(find.text('Under development'), findsNWidgets(3)); // heading + 2 cards
+    for (final label in ['Attendance', 'Gate Entries']) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('4'), findsNothing); // attendance count not shown
+    expect(find.text('7'), findsNothing); // gate count not shown
     expect(find.text('2 issued · 1 locked'), findsOneWidget); // library note: issued and locked together
     expect(find.text('10'), findsOneWidget); // total students
-    expect(find.text('today'), findsNWidgets(2)); // attendance and gate entries are for today
 
     // removed as duplicates / clutter
     for (final gone in ['Unknown Alerts (open)', 'Overdue Books', 'Locked Books', 'Issued Books', 'Campus today', 'Quick actions']) {
@@ -148,11 +155,10 @@ void main() {
     expect(find.textContaining('3 days ago'), findsOneWidget);
   });
 
-  testWidgets('"Needs attention" lists open alerts, overdue books and new reports', (tester) async {
+  testWidgets('"Needs attention" lists overdue books and new reports (unknown-person alerts return with Phase 2)', (tester) async {
     await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
     expect(find.text('Needs attention'), findsOneWidget);
-    expect(find.text('2 unknown-person alerts to review'), findsOneWidget);
     expect(find.text('1 overdue book'), findsOneWidget);
     expect(find.text('1 new student report on library issues'), findsOneWidget);
     expect(find.textContaining('All clear'), findsNothing);
@@ -165,32 +171,24 @@ void main() {
     expect(find.text('Needs attention'), findsNothing);
   });
 
-  testWidgets('attention items open the right section; reports opens the Reports tab', (tester) async {
+  testWidgets('attention items open the right page; reports opens Library > Reports', (tester) async {
     final c = await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
-    await _tap(tester, find.text('2 unknown-person alerts to review'));
-    expect(c.read(adminSectionProvider), AdminSection.gateSecurity);
-
-    c.read(adminSectionProvider.notifier).state = AdminSection.dashboard;
     await _tap(tester, find.text('1 overdue book'));
-    expect(c.read(adminSectionProvider), AdminSection.library);
-    expect(c.read(adminLibraryTabProvider), 0);
+    expect(c.read(adminSectionProvider), AdminSection.libraryCatalog);
 
     c.read(adminSectionProvider.notifier).state = AdminSection.dashboard;
     await _tap(tester, find.text('1 new student report on library issues'));
-    expect(c.read(adminSectionProvider), AdminSection.library);
-    expect(c.read(adminLibraryTabProvider), 1);
+    expect(c.read(adminSectionProvider), AdminSection.libraryReports);
   });
 
-  testWidgets('every card opens its section when tapped', (tester) async {
+  testWidgets('every Phase 1 card opens its page; Phase 2 cards do nothing', (tester) async {
     final c = await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
-    final taps = <String, int>{
+    final taps = <String, String>{
       'Total Students': AdminSection.students,
-      'Library Books': AdminSection.library,
+      'Library Books': AdminSection.libraryCatalog,
       'Bus Status': AdminSection.bus,
-      'Gate Entries': AdminSection.gateSecurity,
-      'Attendance': AdminSection.gateSecurity,
     };
 
     for (final entry in taps.entries) {
@@ -198,6 +196,11 @@ void main() {
       await _tap(tester, find.text(entry.key));
       expect(c.read(adminSectionProvider), entry.value, reason: 'card "${entry.key}"');
     }
+
+    c.read(adminSectionProvider.notifier).state = AdminSection.dashboard;
+    await _tap(tester, find.text('Attendance'));
+    await _tap(tester, find.text('Gate Entries'));
+    expect(c.read(adminSectionProvider), AdminSection.dashboard);
   });
 
   testWidgets('a failed load shows a plain message with Retry, not raw error text', (tester) async {

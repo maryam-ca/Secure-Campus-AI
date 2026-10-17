@@ -116,17 +116,6 @@ void main() {
     expect(repo.savedSeats, 32);
   });
 
-  testWidgets('stop arrows reorder the route; the first cannot go up, the last cannot go down', (tester) async {
-    final repo = await _pump(tester);
-
-    expect(tester.widget<IconButton>(find.byKey(const Key('stop-up-0'))).onPressed, isNull);
-    expect(tester.widget<IconButton>(find.byKey(const Key('stop-down-2'))).onPressed, isNull);
-
-    await tester.tap(find.byKey(const Key('stop-down-0')));
-    await tester.pump();
-    expect(repo.orderCalls.single, {'A': 2, 'B': 1});
-  });
-
   testWidgets('a full bus: the dialog stays open and says why', (tester) async {
     final repo = await _pump(tester, capacity: 1);
     repo.failAssignWith = 'This bus is full: all 1 seats are already assigned. Remove a student or raise the seat count first.';

@@ -21,8 +21,7 @@ import '../../providers/librarian_providers.dart';
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
-  void _open(WidgetRef ref, int section, {int libraryTab = 0}) {
-    ref.read(adminLibraryTabProvider.notifier).state = libraryTab;
+  void _open(WidgetRef ref, String section) {
     ref.read(adminSectionProvider.notifier).state = section;
   }
 
@@ -38,6 +37,8 @@ class AdminDashboardScreen extends ConsumerWidget {
     final newReports = (ref.watch(issueReportsProvider).valueOrNull ?? const [])
         .where((r) => r.isOpen)
         .length;
+    final openCardReports =
+        (ref.watch(lostCardReportsProvider).valueOrNull ?? const <LostCardReportModel>[]).where((r) => !r.isResolved).length;
     final counts = catalogCounts(books, loans);
     final name = ref.watch(currentAppUserProvider).valueOrNull?.name;
 
@@ -83,13 +84,12 @@ class AdminDashboardScreen extends ConsumerWidget {
         ),
         data: (stats) {
           final attention = <AttentionItem>[
-            if (stats.openUnknownAlerts > 0)
+            if (openCardReports > 0)
               AttentionItem(
-                icon: Icons.warning_amber_rounded,
-                color: AppColors.error,
-                text:
-                    '${stats.openUnknownAlerts} unknown-person alert${stats.openUnknownAlerts == 1 ? '' : 's'} to review',
-                onTap: () => _open(ref, AdminSection.gateSecurity),
+                icon: Icons.badge_outlined,
+                color: AppColors.warning,
+                text: '$openCardReports found-card report${openCardReports == 1 ? '' : 's'} to review',
+                onTap: () => _open(ref, AdminSection.lostCards),
               ),
             if (counts.overdue > 0)
               AttentionItem(
@@ -97,7 +97,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 color: AppColors.warning,
                 text:
                     '${counts.overdue} overdue book${counts.overdue == 1 ? '' : 's'}',
-                onTap: () => _open(ref, AdminSection.library),
+                onTap: () => _open(ref, AdminSection.libraryCatalog),
               ),
             if (newReports > 0)
               AttentionItem(
@@ -105,7 +105,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 color: AppColors.primaryBlue,
                 text:
                     '$newReports new student report${newReports == 1 ? '' : 's'} on library issues',
-                onTap: () => _open(ref, AdminSection.library, libraryTab: 1),
+                onTap: () => _open(ref, AdminSection.libraryReports),
               ),
           ];
 
@@ -116,8 +116,6 @@ class AdminDashboardScreen extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 600;
-
               final tiles = <Widget>[
                 StatTile(
                   label: 'Total Students',
@@ -127,28 +125,12 @@ class AdminDashboardScreen extends ConsumerWidget {
                   onTap: () => _open(ref, AdminSection.students),
                 ),
                 StatTile(
-                  label: 'Attendance',
-                  note: 'today',
-                  value: '${stats.todayAttendance}',
-                  icon: Icons.fact_check_outlined,
-                  color: AppColors.success,
-                  onTap: () => _open(ref, AdminSection.gateSecurity),
-                ),
-                StatTile(
-                  label: 'Gate Entries',
-                  note: 'today',
-                  value: '${stats.todayGateEntries}',
-                  icon: Icons.login_outlined,
-                  color: AppColors.primaryBlue,
-                  onTap: () => _open(ref, AdminSection.gateSecurity),
-                ),
-                StatTile(
                   label: 'Library Books',
                   note: libraryNote,
                   value: '${stats.totalBooks}',
                   icon: Icons.menu_book_outlined,
                   color: AppColors.warning,
-                  onTap: () => _open(ref, AdminSection.library),
+                  onTap: () => _open(ref, AdminSection.libraryCatalog),
                 ),
               ];
 
@@ -169,7 +151,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: wide ? 4 : 2,
+                      crossAxisCount: 2,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
                       mainAxisExtent:
@@ -187,6 +169,32 @@ class AdminDashboardScreen extends ConsumerWidget {
                         : AppColors.bodyText,
                     onTap: () => _open(ref, AdminSection.bus),
                   ),
+                  const SizedBox(height: 16),
+                  const _Phase2Heading(),
+                  const SizedBox(height: 8),
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 62,
+                          child: PlannedTile(
+                            label: 'Attendance',
+                            icon: Icons.fact_check_outlined,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 62,
+                          child: PlannedTile(
+                            label: 'Gate Entries',
+                            icon: Icons.login_outlined,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               );
             },
@@ -198,6 +206,37 @@ class AdminDashboardScreen extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
+
+/// Small "Phase 2 · Under development" label above the greyed-out cards.
+class _Phase2Heading extends StatelessWidget {
+  const _Phase2Heading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Text(
+          'PHASE 2',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.bodyText,
+          ),
+        ),
+        SizedBox(width: 8),
+        Text(
+          'Under development',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.warning,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 String _greeting(DateTime now) {
   if (now.hour < 12) return 'Good morning';

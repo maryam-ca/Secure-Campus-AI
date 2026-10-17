@@ -102,6 +102,8 @@ Future<void> _pump(WidgetTester tester, _FakeRepo repo, _FakeSource source, {Lis
       driverClockProvider.overrideWithValue(() => _clockNow),
       authServiceProvider.overrideWithValue(_FakeAuth(authLog ?? [])),
       firebaseAuthStateProvider.overrideWith((ref) => Stream.value(_FakeUser())),
+      // the shared shell shows who is signed in; no Firebase in tests
+      currentAppUserProvider.overrideWith((ref) => Stream.value(null)),
     ],
     child: const MaterialApp(home: DriverDashboardScreen()),
   ));
@@ -215,7 +217,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Sign out'));
+    await tester.tap(find.byTooltip('Open navigation menu')); // Sign out lives in the sidebar
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign out'));
     await tester.pump();
     await tester.pump();
 

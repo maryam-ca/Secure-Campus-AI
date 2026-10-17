@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/catalog_logic.dart';
 import '../../models/admin_models.dart';
-import '../../providers/admin_navigation_provider.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/issue_report_providers.dart';
 import '../librarian/librarian_reports_screen.dart';
@@ -15,7 +14,9 @@ enum _AvailabilityFilter { all, available, issued, locked }
 /// students' "I did not borrow this book" reports). The same Reports view the
 /// librarian sees; the admin can also mark a report resolved.
 class AdminLibraryScreen extends ConsumerWidget {
-  const AdminLibraryScreen({super.key});
+  /// 0 = Catalog, 1 = Reports. The sidebar's Library > Reports opens tab 1.
+  final int initialTab;
+  const AdminLibraryScreen({super.key, this.initialTab = 0});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,18 +28,9 @@ class AdminLibraryScreen extends ConsumerWidget {
             .length ??
         0;
 
-    // The dashboard can ask for the Reports tab ("New student reports").
-    // Read it once for the first tab, then reset so the next visit starts on Catalog.
-    final requestedTab = ref.read(adminLibraryTabProvider).clamp(0, 1);
-    if (requestedTab != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(adminLibraryTabProvider.notifier).state = 0;
-      });
-    }
-
     return DefaultTabController(
       length: 2,
-      initialIndex: requestedTab,
+      initialIndex: initialTab.clamp(0, 1),
       child: Column(
         children: [
           Material(

@@ -271,3 +271,51 @@ class WideStatusTile extends StatelessWidget {
     );
   }
 }
+
+/// A Phase 2 card: same shape as [StatTile] but greyed out, no number and not
+/// tappable, so no figure is ever invented for a feature that is not built yet.
+class PlannedTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  const PlannedTile({super.key, required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    const muted = Color(0xFF8A97A5);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: muted.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: muted, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: muted)),
+                const Text('Under development',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11.5, color: muted)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
