@@ -1,6 +1,6 @@
 # Web deployment (Vercel)
 
-Live site: https://securecampus-theta.vercel.app (Vercel project `securecampus`, scope `azhars-projects-61cd967e`).
+Live site: https://securecampus-seven.vercel.app (Vercel project `securecampus`, account `maryamfatima454`, team `maryams-projects-791bda4b`).
 
 Vercel cannot build Flutter by itself, so the site is a **static upload of a release web build**. It is not auto-deployed from GitHub: pushing to `main` does not update it. Redeploy by hand after changes:
 
