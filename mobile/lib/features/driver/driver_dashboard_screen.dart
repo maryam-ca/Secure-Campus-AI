@@ -5,13 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../core/constants/roles.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/driver_status.dart';
 import '../../core/widgets/confirm_dialog.dart';
-import '../../core/widgets/portal_scaffold.dart';
+import '../../core/widgets/portal_nav.dart';
+import '../../core/widgets/portal_shell.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/driver_repository.dart';
+
+/// The Driver portal has one page; the provider only satisfies the shared shell.
+final _driverPageProvider = StateProvider<String>((ref) => 'trip');
 
 final driverRepositoryProvider = Provider<DriverRepository>((ref) => DriverRepository());
 
@@ -245,12 +248,7 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
     final active = _tripState == _TripState.active || _tripState == _TripState.stopping;
     final stuck = _tripState == _TripState.active && gpsLooksStuck(_lastFix, _now);
 
-    return PortalScaffold(
-      title: 'Driver',
-      role: UserRole.driver,
-      // Signing out must not leave a live trip behind.
-      onBeforeSignOut: _stopTrip,
-      body: _loadingBus
+    final page = _loadingBus
           ? const Center(child: CircularProgressIndicator())
           : _busId == null
               ? const Center(
@@ -341,7 +339,22 @@ class _DriverDashboardScreenState extends ConsumerState<DriverDashboardScreen> {
                       ),
                     ),
                   ],
-                ),
+                );
+
+    return PortalShell(
+      roleLabel: 'Driver',
+      selection: _driverPageProvider,
+      // Signing out must not leave a live trip behind.
+      onBeforeSignOut: _stopTrip,
+      nav: PortalNav(
+        home: PortalItem(
+          id: 'trip',
+          label: 'My Trip',
+          description: 'Start and end your trip; your location is shared while it runs',
+          icon: Icons.directions_bus_filled_outlined,
+          screen: page,
+        ),
+      ),
     );
   }
 }

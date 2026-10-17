@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/lost_card_match.dart';
 import '../../providers/auth_provider.dart';
 
 /// Reached by anyone who taps "Found a student card? Report it" on the
@@ -53,7 +54,8 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
     try {
       await FirebaseFirestore.instance.collection('lostCardReports').add({
         'studentName': _studentName.text.trim(),
-        'registrationNumber': _regNo.text.trim(),
+        'registrationNumber': normalizeRegistration(_regNo.text),
+        'status': 'OPEN',
         'location': _location.text.trim(),
         'description': _description.text.trim(),
         'foundAt': Timestamp.fromDate(_foundAt),
@@ -124,8 +126,8 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Your report has been sent to Admin. If a matching student is found, '
-                        'they will be notified to collect their card.',
+                        'Your report has been sent to Admin and Security. Once the name and '
+                        'registration number are checked, the student will be told to collect their card.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.9), height: 1.5),
                       ),
@@ -182,8 +184,8 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Fill in what you know - even a partial registration number '
-                        'helps us find the owner.',
+                        'Enter the name and registration number exactly as printed on the card. '
+                        'Admin checks them against the student records before the owner is notified.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.9), height: 1.5),
                       ),
@@ -209,17 +211,33 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
                               TextFormField(
                                 controller: _studentName,
                                 decoration: const InputDecoration(
-                                  labelText: 'Student name (if known)',
+                                  labelText: 'Student name (as on the card)',
                                   prefixIcon: Icon(Icons.person_outline),
                                 ),
+                                textCapitalization: TextCapitalization.words,
+                                validator: (v) {
+                                  final name = (v ?? '').trim();
+                                  if (name.isEmpty) return 'Required - the name printed on the card';
+                                  if (name.length < 3) return 'Enter the full name on the card';
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 14),
                               TextFormField(
                                 controller: _regNo,
                                 decoration: const InputDecoration(
-                                  labelText: 'Registration number (if visible)',
+                                  labelText: 'Registration number (as on the card)',
                                   prefixIcon: Icon(Icons.badge_outlined),
                                 ),
+                                textCapitalization: TextCapitalization.characters,
+                                validator: (v) {
+                                  final reg = normalizeRegistration(v ?? '');
+                                  if (reg.isEmpty) return 'Required - the number printed on the card';
+                                  if (!RegExp(r'^[A-Z0-9][A-Z0-9-]{2,29}$').hasMatch(reg)) {
+                                    return 'Enter the registration number exactly as printed';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 14),
                               TextFormField(

@@ -142,25 +142,34 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
-    // securityAlerts (unknown-person events) - Admin + Security. Security
-    // may update alert status (read/resolved) but not fabricate new ones
-    // from the client; those come from the iris_ai service.
+    // securityAlerts (unknown-person events) - Admin + Security can read.
+    // Only Admin may change an alert's status (resolve it); Security sees the
+    // result. Alerts themselves come from the iris_ai service, never a client.
     // ---------------------------------------------------------------
     match /securityAlerts/{alertId} {
       allow read: if isAdmin() || isSecurity();
-      allow update: if (isAdmin() || isSecurity())
+      allow update: if isAdmin()
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       allow create, delete: if isAdmin();
     }
 
     // ---------------------------------------------------------------
     // lostCardReports - anyone signed in (including an anonymous-auth
-    // "finder" session) may submit a report. Only Admin can read/manage
-    // the queue and update status.
+    // "finder" session) may submit a report, but only as a new OPEN one with
+    // a name and registration number. Admin reads, notifies the student and
+    // resolves (only Admin may update or delete). Security may read, so they
+    // see the report and then see it marked Resolved - they cannot change it.
     // ---------------------------------------------------------------
     match /lostCardReports/{reportId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.status == 'OPEN'
+                    && request.resource.data.notified == false
+                    && request.resource.data.studentName is string
+                    && request.resource.data.studentName.size() > 1
+                    && request.resource.data.registrationNumber is string
+                    && request.resource.data.registrationNumber.size() > 2;
+      allow read: if isAdmin() || isSecurity();
+      allow update, delete: if isAdmin();
     }
 
     // ---------------------------------------------------------------

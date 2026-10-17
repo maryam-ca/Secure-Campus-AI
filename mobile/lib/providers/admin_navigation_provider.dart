@@ -1,24 +1,32 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Which section of the Admin portal is open (index into the section list in
-/// admin_home_shell.dart). Shared so dashboard cards can jump to a section.
-final adminSectionProvider = StateProvider<int>((ref) => 0);
+/// Which page of the Admin portal is open. The value is an [AdminSection] id;
+/// the sidebar and the dashboard cards both set it. The pages themselves are
+/// listed in admin_nav.dart.
+final adminSectionProvider = StateProvider<String>((ref) => AdminSection.dashboard);
 
-/// Which tab of Admin > Library to open next: 0 = Catalog, 1 = Reports.
-/// The dashboard sets it (e.g. "New student reports" opens Reports); the
-/// Library page reads it when it opens, then resets it to 0.
-final adminLibraryTabProvider = StateProvider<int>((ref) => 0);
-
-/// Section indexes, in the same order as the shell's drawer.
+/// Page ids. A main module's own landing page uses its group id (see
+/// AdminNavGroup.id). Sub-modules have their own id (e.g. Library > Catalog and
+/// Library > Reports) so the sidebar and dashboard can open them directly.
 class AdminSection {
   AdminSection._();
-  static const dashboard = 0;
-  static const students = 1;
-  static const courses = 2;
-  static const camera = 3;
-  static const library = 4;
-  static const bus = 5;
-  static const gateSecurity = 6;
-  static const lostCards = 7;
-  static const staff = 8;
+  static const dashboard = 'dashboard';
+
+  // Phase 1
+  static const students = 'students';
+  static const staffSecurity = 'staff.security';
+  static const staffLibrarian = 'staff.librarian';
+  static const staffDriver = 'staff.driver';
+  static const courses = 'courses';
+  static const libraryCatalog = 'library.catalog';
+  static const libraryReports = 'library.reports';
+  static const bus = 'bus';
+  static const stops = 'stops';
+  static const lostCards = 'lost-cards';
+
+  // Phase 2 (under development, not clickable yet)
+  static const camera = 'camera';
+  static const attendance = 'attendance';
+  static const gateSecurity = 'gate-security';
+  static const settings = 'settings';
 }

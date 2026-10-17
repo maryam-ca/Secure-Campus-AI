@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:securecampus/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:securecampus/core/widgets/animated_shield_logo.dart';
@@ -134,8 +135,10 @@ void main() {
       await pump(tester, _overrides(loans: [_loan('Algorithms', dueInDays: 9)], bus: _bus(active: false)));
 
       expect(find.textContaining('All clear'), findsOneWidget);
-      expect(find.text('80%'), findsOneWidget);
-      expect(find.text('8 of 10 classes'), findsOneWidget);
+      // attendance is Phase 2: a greyed card, no percentage
+      expect(find.text('Attendance'), findsOneWidget);
+      expect(find.text('Under development'), findsOneWidget);
+      expect(find.text('80%'), findsNothing);
       expect(find.text('Books issued'), findsOneWidget);
       expect(find.textContaining('next due'), findsOneWidget);
       expect(find.text('Unread alerts'), findsOneWidget);
@@ -189,12 +192,13 @@ void main() {
         _overrides(loans: [_loan('Old', dueInDays: -3)], notes: [_note('1')], bus: _bus(eta: 8)),
       );
 
-      await tester.tap(find.text('Attendance'));
+      await tester.tap(find.text('Attendance')); // Phase 2: does nothing
+      await tester.tap(find.text('Courses'));
       await tester.tap(find.text('Books issued'));
       await tester.tap(find.text('Unread alerts'));
       await tester.tap(find.text('Campus Bus - Block A'));
       await tester.tap(find.text('1 book is overdue - please return it'));
-      expect(opened, [StudentTab.attendance, StudentTab.library, StudentTab.alerts, StudentTab.bus, StudentTab.library]);
+      expect(opened, [StudentTab.courses, StudentTab.library, StudentTab.alerts, StudentTab.bus, StudentTab.library]);
     });
 
     testWidgets('with no bus assignment it says so', (tester) async {
@@ -205,19 +209,29 @@ void main() {
 
   group('StudentDashboardScreen', () {
     Future<void> pumpDash(WidgetTester tester, List<Override> overrides) async {
-      tester.view.physicalSize = const Size(1080, 2220);
-      tester.view.devicePixelRatio = 3;
+      // wide, so the sidebar is always visible (on a phone it is a drawer)
+      tester.view.physicalSize = const Size(3000, 1800);
+      tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(ProviderScope(overrides: overrides, child: const MaterialApp(home: StudentDashboardScreen())));
+      await tester.pumpWidget(ProviderScope(
+          overrides: [...overrides, currentAppUserProvider.overrideWith((ref) => Stream.value(null))],
+          child: const MaterialApp(home: StudentDashboardScreen())));
       await tester.pumpAndSettle();
     }
 
-    testWidgets('five tabs with Home first and an unread badge on Alerts', (tester) async {
+    testWidgets('sidebar has Home first and an unread badge on Alerts', (tester) async {
       await pumpDash(tester, _overrides(notes: [_note('1'), _note('2'), _note('3', read: true)]));
 
-      for (final label in ['Home', 'Attendance', 'Bus', 'Library', 'Alerts']) {
-        expect(find.text(label), findsWidgets, reason: label);
+      for (final id in ['home', 'courses', 'bus', 'library', 'alerts']) {
+        expect(find.byKey(ValueKey('nav-$id')), findsOneWidget, reason: id);
       }
+      // Attendance sits under Phase 2, locked
+      await tester.tap(find.byKey(const ValueKey('toggle-Phase 2')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('nav-attendance')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('nav-attendance')));
+      await tester.pumpAndSettle();
+      expect(find.text('Mehak Fatima'), findsOneWidget); // still on Home
       expect(find.byType(Badge), findsOneWidget);
       expect(find.descendant(of: find.byType(Badge), matching: find.text('2')), findsOneWidget);
       expect(find.text('Mehak Fatima'), findsOneWidget); // the Home tab is showing
@@ -225,14 +239,14 @@ void main() {
 
     testWidgets('no badge when every alert has been read', (tester) async {
       await pumpDash(tester, _overrides(notes: [_note('1', read: true)]));
-      expect(tester.widget<Badge>(find.byType(Badge)).isLabelVisible, isFalse);
+      expect(find.byType(Badge), findsNothing);
     });
 
     testWidgets('Library tab lists current books and the returned-books history', (tester) async {
       await pumpDash(tester, _overrides(loans: [_loan('Algorithms', dueInDays: 5), _loan('Networks', dueInDays: -9, returned: true)]));
 
       // these tabs have a looping header animation, so pumpAndSettle would never finish
-      await tester.tap(find.text('Library').last);
+      await tester.tap(find.byKey(const ValueKey('nav-library')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.text('Algorithms'), findsOneWidget);

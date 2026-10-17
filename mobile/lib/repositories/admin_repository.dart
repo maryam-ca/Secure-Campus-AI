@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
 import 'package:intl/intl.dart';
 import '../core/utils/bus_capacity.dart';
+import '../core/utils/lost_card_match.dart';
 import '../models/admin_models.dart';
 import '../models/transport_models.dart';
 import '../models/course_model.dart';
@@ -241,22 +242,34 @@ class AdminRepository {
         (s) => s.docs.map(LostCardReportModel.fromFirestore).toList());
   }
 
-  /// Finds a student by registration number and sends them the
-  /// found-card notification (spec §23 - informational Rs.100 fine
-  /// note, no payment record of any kind).
+  /// The registered name for this registration number, or null if no student
+  /// has it. Used to check a finder's report against the real record.
+  Future<String?> registeredStudentName(String registrationNumber) async {
+    final reg = normalizeRegistration(registrationNumber);
+    if (reg.isEmpty) return null;
+    final match = await _db.collection('students').where('registrationNumber', isEqualTo: reg).limit(1).get();
+    if (match.docs.isEmpty) return null;
+    return match.docs.first.data()['name'] as String? ?? '';
+  }
+
+  /// Sends the student the found-card notification (spec §23 - informational
+  /// Rs.100 fine note, no payment record of any kind). Only Admin can do this,
+  /// and only when the report's name and registration number match a real
+  /// student; returns false otherwise.
   Future<bool> notifyStudentCardFound(LostCardReportModel report) async {
-    if (report.registrationNumberGuess.isEmpty) return false;
+    final reg = normalizeRegistration(report.registrationNumberGuess);
+    if (reg.isEmpty) return false;
 
-    final match = await _db
-        .collection('students')
-        .where('registrationNumber', isEqualTo: report.registrationNumberGuess)
-        .limit(1)
-        .get();
+    final match = await _db.collection('students').where('registrationNumber', isEqualTo: reg).limit(1).get();
     if (match.docs.isEmpty) return false;
+    final student = match.docs.first;
+    if (matchCard(registeredName: student.data()['name'] as String?, enteredName: report.studentNameGuess) !=
+        CardMatch.verified) {
+      return false;
+    }
 
-    final studentId = match.docs.first.id;
     await _db.collection('notifications').add({
-      'recipient': studentId,
+      'recipient': student.id,
       'title': 'Student Card Found',
       'message': 'Your student card has been found at "${report.location}". '
           'Please collect it from Admin. Fine: Rs. 100 (informational only - no online payment).',
@@ -267,5 +280,20 @@ class AdminRepository {
     });
     await _db.collection('lostCardReports').doc(report.id).update({'notified': true});
     return true;
+  }
+
+  /// Closes a report. Admin only (enforced by firestore.rules). Security then
+  /// sees it marked Resolved for a day, after which it drops off their list.
+  Future<void> resolveLostCardReport(String reportId) {
+    return _db.collection('lostCardReports').doc(reportId).update({
+      'status': 'RESOLVED',
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Deletes a report outright. Admin only (enforced by firestore.rules); the
+  /// screen offers it only for reports that do not match a real student.
+  Future<void> deleteLostCardReport(String reportId) {
+    return _db.collection('lostCardReports').doc(reportId).delete();
   }
 }

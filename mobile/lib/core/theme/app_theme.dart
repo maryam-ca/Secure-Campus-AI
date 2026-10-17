@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// SecureCampus visual identity: white backgrounds, a professional blue
 /// primary, navy text, soft cards — deliberately restrained (spec §40):
@@ -37,14 +38,17 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
       fontFamily: 'Roboto',
+      // Same solid colour as the sidebar header, so the top bar and the
+      // sidebar read as one frame on every screen.
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.cardBackground,
-        foregroundColor: AppColors.navyText,
+        backgroundColor: AppColors.primaryBlueDark,
+        foregroundColor: Colors.white,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: TextStyle(
-          color: AppColors.navyText,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),

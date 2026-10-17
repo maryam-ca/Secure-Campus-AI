@@ -11,7 +11,7 @@ import '../../../providers/student_providers.dart';
 class StudentTab {
   StudentTab._();
   static const home = 0;
-  static const attendance = 1;
+  static const courses = 1;
   static const bus = 2;
   static const library = 3;
   static const alerts = 4;
@@ -34,7 +34,6 @@ class StudentHomeSection extends ConsumerWidget {
     final issues = ref.watch(libraryIssuesProvider).valueOrNull ?? const <LibraryIssueModel>[];
     final unread = ref.watch(unreadNotificationsCountProvider);
     final bus = ref.watch(busAssignmentProvider).valueOrNull;
-    final attendance = ref.watch(overallAttendanceProvider);
 
     final active = issues.where((i) => i.status != LibraryIssueStatus.returned).toList();
     final overdue = active.where((i) => i.status == LibraryIssueStatus.overdue).length;
@@ -72,7 +71,6 @@ class StudentHomeSection extends ConsumerWidget {
         ),
     ];
 
-    final pct = attendance?.percentage;
     final nextDue = active.where((i) => i.status == LibraryIssueStatus.issued).toList()
       ..sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
 
@@ -98,18 +96,8 @@ class StudentHomeSection extends ConsumerWidget {
             mainAxisExtent: 92,
           ),
           children: [
-            StatTile(
-              label: 'Attendance',
-              value: pct == null ? '-' : '${pct.round()}%',
-              note: attendance == null
-                  ? 'loading'
-                  : attendance.total == 0
-                      ? 'no classes yet'
-                      : '${attendance.present} of ${attendance.total} classes',
-              icon: Icons.fact_check_outlined,
-              color: pct != null && pct < 75 ? AppColors.error : AppColors.success,
-              onTap: () => onOpenTab(StudentTab.attendance),
-            ),
+            // Attendance comes from the iris camera (Phase 2): no number yet.
+            const PlannedTile(label: 'Attendance', icon: Icons.fact_check_outlined),
             StatTile(
               label: 'Books issued',
               value: '${active.length}',
@@ -132,10 +120,10 @@ class StudentHomeSection extends ConsumerWidget {
             ),
             StatTile(
               label: 'Courses',
-              value: '${attendance?.courses ?? student?.courseIds.length ?? 0}',
+              value: '${student?.courseIds.length ?? 0}',
               icon: Icons.school_outlined,
               color: AppColors.primaryBlueDark,
-              onTap: () => onOpenTab(StudentTab.attendance),
+              onTap: () => onOpenTab(StudentTab.courses),
             ),
           ],
         ),

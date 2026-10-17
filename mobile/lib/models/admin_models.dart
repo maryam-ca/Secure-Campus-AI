@@ -204,6 +204,10 @@ class LostCardReportModel {
   final bool notified;
   final DateTime? createdAt;
 
+  /// 'OPEN' until an Admin resolves it, then 'RESOLVED' (Admin only).
+  final String status;
+  final DateTime? resolvedAt;
+
   const LostCardReportModel({
     required this.id,
     required this.studentNameGuess,
@@ -212,7 +216,23 @@ class LostCardReportModel {
     required this.description,
     required this.notified,
     required this.createdAt,
+    this.status = 'OPEN',
+    this.resolvedAt,
   });
+
+  bool get isResolved => status == 'RESOLVED';
+
+  /// Security keeps seeing a resolved report, marked Resolved, for this long
+  /// and then it disappears from their list.
+  static const securityResolvedVisibility = Duration(hours: 24);
+
+  /// Whether Security should still list this report at [now]: open ones always,
+  /// resolved ones only for [securityResolvedVisibility] after resolving.
+  bool visibleToSecurity(DateTime now) {
+    if (!isResolved) return true;
+    final at = resolvedAt;
+    return at != null && now.difference(at) < securityResolvedVisibility;
+  }
 
   factory LostCardReportModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
@@ -224,6 +244,8 @@ class LostCardReportModel {
       description: data['description'] as String? ?? '',
       notified: data['notified'] as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      status: data['status'] as String? ?? 'OPEN',
+      resolvedAt: (data['resolvedAt'] as Timestamp?)?.toDate(),
     );
   }
 }

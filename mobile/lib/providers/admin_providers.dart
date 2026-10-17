@@ -71,3 +71,15 @@ final securityAlertsProvider = StreamProvider.autoDispose<List<SecurityAlertMode
 final lostCardReportsProvider = StreamProvider.autoDispose<List<LostCardReportModel>>((ref) {
   return ref.watch(adminRepositoryProvider).watchLostCardReports();
 });
+
+/// The registered student's name for a registration number (null: no such
+/// student), so Admin can check a finder's report against the real record.
+final registeredNameProvider = FutureProvider.autoDispose.family<String?, String>((ref, regNo) {
+  return ref.watch(adminRepositoryProvider).registeredStudentName(regNo);
+});
+
+/// Reports Security should see: open ones, plus resolved ones for a day.
+final securityLostCardsProvider = Provider.autoDispose<AsyncValue<List<LostCardReportModel>>>((ref) {
+  final now = DateTime.now();
+  return ref.watch(lostCardReportsProvider).whenData((all) => all.where((r) => r.visibleToSecurity(now)).toList());
+});
