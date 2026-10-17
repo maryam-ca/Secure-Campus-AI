@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../config/demo_accounts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animated_shield_logo.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
-import 'demo_accounts_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  /// One-tap test accounts. Empty (so no button) unless a debug build was
-  /// given DEMO_ACCOUNTS; overridable so tests can supply their own.
-  final List<DemoAccount>? demoAccounts;
-
-  const LoginScreen({super.key, this.demoAccounts});
-
-  List<DemoAccount> get accounts => demoAccounts ?? DemoAccounts.all;
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -55,19 +47,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  Future<void> _showDemoAccounts() async {
-    final chosen = await showModalBottomSheet<DemoAccount>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => DemoAccountsSheet(accounts: widget.accounts),
-    );
-    if (chosen != null) {
-      _emailController.text = chosen.email;
-      await _signIn(chosen.email, chosen.password);
     }
   }
 
@@ -205,14 +184,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       )
                                     : const Text('Sign in'),
                               ),
-                              if (widget.accounts.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                OutlinedButton.icon(
-                                  onPressed: _isSubmitting ? null : _showDemoAccounts,
-                                  icon: const Icon(Icons.science_outlined, size: 18),
-                                  label: const Text('Demo accounts'),
-                                ),
-                              ],
                             ],
                           ),
                         ),

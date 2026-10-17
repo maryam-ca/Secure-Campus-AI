@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Removed the pre-filled "Demo accounts" from the login page
+- **Type:** refactor
+- **Areas:** mobile, scripts, docs
+- **What changed:** The login page no longer has a "Demo accounts" button or any pre-filled credentials. Removed `config/demo_accounts.dart`, `features/auth/demo_accounts_sheet.dart`, `test/demo_accounts_test.dart`, `scripts/make_demo_defines.py`, and the demo-accounts step in `run_app.bat`. The forced "change your temporary password at first login" rule now applies to every build (before, it was switched off in debug builds with demo accounts).
+- **Files:** mobile/lib/features/auth/login_screen.dart, core/router/password_gate.dart, run_app.bat, docs/DEPLOY_WEB.md, README.md
+- **Verified by:** see the test run for this change.
+- **Notes:** An account created by Admin or the seed script with a temporary password must now be given a new password at its first sign-in. A local `mobile/demo_accounts.json` (git-ignored) is no longer read by anything and can be deleted. Builds made earlier (the APK, the Vercel site) still contain the old login page until rebuilt.
+
 ### 2026-10-18 — Bus ETA now uses real road distance (free OpenStreetMap routing)
 - **Type:** feature
 - **Areas:** bus_eta, docs

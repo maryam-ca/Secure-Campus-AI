@@ -166,7 +166,7 @@ temporary password to relay to them).
 ```
 ./run.sh                    # iris_ai + bus_eta
 # the app - from the project root (Windows; note the leading .\):
-.\run_app.bat                  # flutter run on the connected phone, with demo accounts
+.\run_app.bat                  # flutter run on the connected phone
 .\install_app.bat              # build + install + launch, no hot-reload session
 # or: cd mobile  and then  flutter run
 # Do NOT run plain `flutter run` in the project root: the Flutter app is in

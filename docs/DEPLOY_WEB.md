@@ -12,7 +12,7 @@ vercel deploy --prod --yes --name securecampus
 ```
 
 Notes
-- It is a **release** build, so the debug-only "Demo accounts" button (and the demo passwords) are not included. Never pass `--dart-define-from-file=demo_accounts.json` to a build that goes on a public URL.
+- The login page has no pre-filled accounts or "Demo accounts" button in any build: users sign in with their own email and password.
 - Routing uses `#/` (e.g. `/#/login`), so no rewrites are needed.
 - The Python services (`iris_ai`, `bus_eta`, `overdue_checker`) are not hosted on Vercel. The web app calls `BACKEND_BASE_URL` (default `http://localhost:8000`), so features that need that service (admin account creation, camera control) do not work on the public site.
 - Firestore rules are deployed separately: `firebase deploy --only firestore:rules --project campus-a4087`, signed in as an account that owns the project.
