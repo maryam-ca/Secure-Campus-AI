@@ -44,21 +44,18 @@ const _student = StudentModel(
   semester: 5,
   email: 'm@x.edu',
   courseIds: ['SE', 'AI'],
-  irisEnrolled: false,
 );
 
 List<Override> _overrides({
   List<LibraryIssueModel> loans = const [],
   List<AppNotification> notes = const [],
   BusAssignmentModel? bus,
-  AttendanceOverall? attendance = const AttendanceOverall(present: 8, total: 10, courses: 2),
 }) =>
     [
       studentProfileProvider.overrideWith((ref) => Stream.value(_student)),
       libraryIssuesProvider.overrideWith((ref) => Stream.value(loans)),
       studentNotificationsProvider.overrideWith((ref) => Stream.value(notes)),
       busAssignmentProvider.overrideWith((ref) => Stream.value(bus)),
-      overallAttendanceProvider.overrideWithValue(attendance),
     ];
 
 void main() {

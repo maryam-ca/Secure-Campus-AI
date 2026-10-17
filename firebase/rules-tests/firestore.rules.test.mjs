@@ -40,8 +40,6 @@ beforeEach(async () => {
     await setDoc(doc(db, 'books', 'B2'), { title: 'Networks', available: true, locked: true, lockReason: 'in safe' });
     await setDoc(doc(db, 'libraryIssues', 'issue-stu1'), { studentId: 'stu1', bookId: 'B3', returned: false });
     await setDoc(doc(db, 'libraryIssues', 'issue-stu2'), { studentId: 'stu2', bookId: 'B4', returned: false });
-    await setDoc(doc(db, 'gateEntries', 'g1'), { studentId: 'stu1' });
-    await setDoc(doc(db, 'irisProfiles', 'stu1'), { code: 'x' });
   });
 });
 
@@ -99,12 +97,6 @@ test('a student reads only their own loans', async () => {
   await assertFails(getDoc(doc(as('stu1'), 'libraryIssues/issue-stu2')));
 });
 
-test('students cannot read gate entries or iris profiles; security can read gate entries', async () => {
-  await assertFails(getDoc(doc(as('stu1'), 'gateEntries/g1')));
-  await assertFails(getDoc(doc(as('stu1'), 'irisProfiles/stu1')));
-  await assertFails(getDoc(doc(as('admin1'), 'irisProfiles/stu1'))); // nobody reads biometrics from a client
-  await assertSucceeds(getDoc(doc(as('sec1'), 'gateEntries/g1')));
-});
 
 // ---------------------------------------------------------------- student reports
 const report = (uid, issueId, over = {}) => ({
@@ -192,7 +184,7 @@ test('only the admin adds, moves or removes a bus stop, with real coordinates', 
   await assertSucceeds(deleteDoc(doc(as('admin1'), 'busStops/S1')));
 });
 
-// ---------------------------------------------------------------- found-card reports + alerts
+// ---------------------------------------------------------------- found-card reports
 const foundReport = (over = {}) => ({
   studentName: 'Ayesha Khan', registrationNumber: 'FA23-BSE-001', location: 'Library',
   description: '', notified: false, status: 'OPEN', createdAt: serverTimestamp(), ...over,
@@ -223,12 +215,27 @@ test('Admin and Security read reports; only Admin resolves or deletes; students 
   await assertSucceeds(deleteDoc(doc(as('admin1'), 'lostCardReports/r1')));
 });
 
-test('Security reads unknown-person alerts but cannot resolve them; Admin can', async () => {
+// ---------------------------------------------------------------- Phase 2 collections are closed
+test('attendance, gate entries, iris profiles and security alerts are not open to any role in Phase 1', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), 'securityAlerts/a1'), { status: 'NEW', cameraLocation: 'Main Gate' });
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'attendance/a1'), { studentId: 'stu1' });
+    await setDoc(doc(db, 'gateEntries/g1'), { studentId: 'stu1' });
+    await setDoc(doc(db, 'irisProfiles/stu1'), { code: 'x' });
+    await setDoc(doc(db, 'securityAlerts/s1'), { status: 'NEW' });
   });
-  await assertSucceeds(getDoc(doc(as('sec1'), 'securityAlerts/a1')));
-  await assertFails(updateDoc(doc(as('sec1'), 'securityAlerts/a1'), { status: 'RESOLVED' }));
-  await assertSucceeds(updateDoc(doc(as('admin1'), 'securityAlerts/a1'), { status: 'RESOLVED' }));
-  await assertFails(getDoc(doc(as('stu1'), 'securityAlerts/a1')));
+  for (const path of ['attendance/a1', 'gateEntries/g1', 'irisProfiles/stu1', 'securityAlerts/s1']) {
+    for (const uid of ['admin1', 'sec1', 'stu1', 'lib1']) {
+      await assertFails(getDoc(doc(as(uid), path)));
+    }
+  }
+});
+
+test('Security cannot read student records in Phase 1; the student and librarian still can', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'students/stu1'), { name: 'A', registrationNumber: 'FA23-BSE-001' });
+  });
+  await assertFails(getDoc(doc(as('sec1'), 'students/stu1')));
+  await assertSucceeds(getDoc(doc(as('stu1'), 'students/stu1')));
+  await assertSucceeds(getDoc(doc(as('lib1'), 'students/stu1')));
 });

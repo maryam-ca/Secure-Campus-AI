@@ -1,9 +1,7 @@
 import '../../models/student_model.dart';
 import 'student_search.dart';
 
-enum IrisFilter { all, enrolled, notEnrolled }
-
-/// Students for the Admin list: narrowed by what was typed, by iris status and
+/// Students for the Admin list: narrowed by what was typed and
 /// by semester. Sorted by registration number.
 ///
 /// The text matches any part of the name, program or email, and any part of the
@@ -11,7 +9,6 @@ enum IrisFilter { all, enrolled, notEnrolled }
 List<StudentModel> filterStudents(
   List<StudentModel> all, {
   String query = '',
-  IrisFilter iris = IrisFilter.all,
   int? semester,
 }) {
   final text = query.trim().toLowerCase();
@@ -26,26 +23,11 @@ List<StudentModel> filterStudents(
         (id.isNotEmpty && normalizeRegNo(s.registrationNumber).contains(id));
   }
 
-  bool irisHit(StudentModel s) {
-    switch (iris) {
-      case IrisFilter.all:
-        return true;
-      case IrisFilter.enrolled:
-        return s.irisEnrolled;
-      case IrisFilter.notEnrolled:
-        return !s.irisEnrolled;
-    }
-  }
 
-  return all.where((s) => textHit(s) && irisHit(s) && (semester == null || s.semester == semester)).toList()
+  return all.where((s) => textHit(s) && (semester == null || s.semester == semester)).toList()
     ..sort((a, b) => a.registrationNumber.compareTo(b.registrationNumber));
 }
 
-/// How many students fall in each iris group (shown on the filter chips).
-({int all, int enrolled, int notEnrolled}) irisCounts(List<StudentModel> students) {
-  final enrolled = students.where((s) => s.irisEnrolled).length;
-  return (all: students.length, enrolled: enrolled, notEnrolled: students.length - enrolled);
-}
 
 /// The semesters that actually occur, ascending (for the semester filter).
 List<int> semestersIn(List<StudentModel> students) => (students.map((s) => s.semester).toSet().toList()..sort());

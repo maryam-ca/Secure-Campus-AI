@@ -9,7 +9,7 @@ import 'package:securecampus/models/student_model.dart';
 import 'package:securecampus/providers/admin_providers.dart';
 import 'package:securecampus/providers/admin_student_providers.dart';
 
-StudentModel _s(String reg, String name, {int sem = 5, bool iris = false, List<String> courses = const []}) => StudentModel(
+StudentModel _s(String reg, String name, {int sem = 5, List<String> courses = const []}) => StudentModel(
       uid: 'u-$reg',
       registrationNumber: reg,
       name: name,
@@ -17,11 +17,10 @@ StudentModel _s(String reg, String name, {int sem = 5, bool iris = false, List<S
       semester: sem,
       email: '${reg.toLowerCase()}@securecampus.edu.pk',
       courseIds: courses,
-      irisEnrolled: iris,
     );
 
 final _students = [
-  _s('FA23-BSE-001', 'Ayesha Khan', sem: 5, iris: true),
+  _s('FA23-BSE-001', 'Ayesha Khan', sem: 5),
   _s('FA23-BSE-007', 'Mehak Fatima', sem: 5),
   _s('FA24-BSE-003', 'Bilal Ahmed', sem: 3),
 ];
@@ -46,31 +45,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('shows every student, the filter chips with counts, and how many are shown', (tester) async {
+    testWidgets('shows every student and how many are shown, with no iris information', (tester) async {
       await pump(tester);
 
       expect(find.text('Ayesha Khan'), findsOneWidget);
       expect(find.text('Mehak Fatima'), findsOneWidget);
       expect(find.text('Bilal Ahmed'), findsOneWidget);
-      expect(find.text('All (3)'), findsOneWidget);
-      expect(find.text('Iris enrolled (1)'), findsOneWidget);
-      expect(find.text('Not enrolled (2)'), findsOneWidget);
       expect(find.text('3 of 3 students'), findsOneWidget);
-    });
-
-    testWidgets('the iris chips narrow the list', (tester) async {
-      await pump(tester);
-
-      await tester.tap(find.text('Not enrolled (2)'));
-      await tester.pump();
-      expect(find.text('Ayesha Khan'), findsNothing);
-      expect(find.text('Mehak Fatima'), findsOneWidget);
-      expect(find.text('2 of 3 students'), findsOneWidget);
-
-      await tester.tap(find.text('Iris enrolled (1)'));
-      await tester.pump();
-      expect(find.text('Ayesha Khan'), findsOneWidget);
-      expect(find.text('Mehak Fatima'), findsNothing);
+      expect(find.textContaining('Iris'), findsNothing); // iris is Phase 2
+      expect(find.textContaining('enrolled'), findsNothing);
     });
 
     testWidgets('search finds a student by any part of the ID or the name', (tester) async {
@@ -141,11 +124,6 @@ void main() {
                 CourseModel(id: 'SE', name: 'Software Engineering'),
                 CourseModel(id: 'AI', name: 'Artificial Intelligence'),
               ]),
-          adminStudentAttendanceProvider.overrideWith((ref, key) => Stream.value(CourseAttendanceSummary(
-                course: CourseModel(id: key.courseId, name: key.courseName),
-                totalSessions: key.courseId == 'SE' ? 10 : 0,
-                present: key.courseId == 'SE' ? 6 : 0,
-              ))),
           adminStudentLoansProvider.overrideWith((ref, uid) => Stream.value([
                 LibraryIssueModel(
                     id: '1',
@@ -171,11 +149,11 @@ void main() {
 
       expect(find.text('Mehak Fatima'), findsOneWidget);
       expect(find.text('Account active'), findsOneWidget);
-      expect(find.text('Iris not enrolled'), findsOneWidget);
+      expect(find.textContaining('Iris'), findsNothing); // iris is Phase 2
 
       expect(find.text('Software Engineering'), findsOneWidget);
-      expect(find.text('6/10 · 60%'), findsOneWidget);
-      expect(find.text('no classes yet'), findsOneWidget); // Artificial Intelligence
+      expect(find.text('Artificial Intelligence'), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing); // attendance is Phase 2
 
       expect(find.text('Algorithms'), findsOneWidget);
       expect(find.textContaining('OVERDUE'), findsOneWidget);

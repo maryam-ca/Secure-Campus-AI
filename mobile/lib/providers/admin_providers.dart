@@ -56,14 +56,6 @@ final accountsByRoleProvider = StreamProvider.family.autoDispose<List<AccountSum
   return ref.watch(adminRepositoryProvider).watchAccountsByRole(role);
 });
 
-final gateEntriesProvider = StreamProvider.autoDispose<List<GateEntryModel>>((ref) {
-  return ref.watch(adminRepositoryProvider).watchRecentGateEntries();
-});
-
-final securityAlertsProvider = StreamProvider.autoDispose<List<SecurityAlertModel>>((ref) {
-  return ref.watch(adminRepositoryProvider).watchSecurityAlerts();
-});
-
 final lostCardReportsProvider = StreamProvider.autoDispose<List<LostCardReportModel>>((ref) {
   return ref.watch(adminRepositoryProvider).watchLostCardReports();
 });

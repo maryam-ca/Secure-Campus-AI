@@ -51,7 +51,6 @@ const _student = StudentModel(
   semester: 5,
   email: 'a@x.pk',
   courseIds: [],
-  irisEnrolled: false,
 );
 
 Future<_FakeRepo> _pump(

@@ -36,7 +36,6 @@ const _existing = StudentModel(
   semester: 5,
   email: 'existing@x.edu',
   courseIds: [],
-  irisEnrolled: false,
 );
 
 const _header = 'name,email,registration_number,program,semester,courses\n';

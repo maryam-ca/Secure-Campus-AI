@@ -1,7 +1,6 @@
 """
-Central configuration for the iris AI service. Everything that varies
-between environments (camera source, recognition threshold, Firebase
-project, credential path) is read from environment variables so nothing
+Central configuration for the backend service. Everything that varies
+between environments (Firebase project, credential path) is read from environment variables so nothing
 environment-specific is hardcoded in code. See ../.env.example.
 """
 
@@ -34,20 +33,6 @@ class Settings(BaseSettings):
     GOOGLE_APPLICATION_CREDENTIALS: str = ""  # path to service account JSON
     FIREBASE_STORAGE_BUCKET: str = ""
     FIREBASE_DATABASE_URL: str = ""  # Realtime Database URL, needed for driver GPS reads
-
-    # Camera
-    CAMERA_RTSP_URL: str = ""
-    CAMERA_NAME: str = "MAIN-CAM"
-    CAMERA_LOCATION: str = "unassigned"
-
-    # Iris recognition
-    IRIS_MATCH_THRESHOLD: float = 0.32  # NOT experimentally validated - see docs/IRIS_MODEL.md
-    IRIS_MODEL_PATH: str = ""  # reserved: path to a future deep-embedding model, unused by the classical pipeline
-
-    # Event handling
-    UNKNOWN_ALERT_COOLDOWN_SECONDS: int = 120   # per-camera cooldown between UNKNOWN alerts
-    ATTENDANCE_DEDUPE_MINUTES: int = 30         # don't re-mark attendance for same student+course within this window
-    RECOGNITION_INTERVAL_SECONDS: float = 2.0   # how often the live loop pulls & processes a frame
 
     # Service
     API_PORT: int = 8000

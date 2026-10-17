@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Absolute path to the repo-root .env - same fix as iris_ai/app/config.py;
@@ -30,6 +31,17 @@ class Settings(BaseSettings):
     # Optional: Google Distance Matrix (or compatible) API key for a real
     # routing-based ETA instead of straight-line/haversine distance.
     MAP_API_KEY: str = ""
+
+
+    @field_validator("GOOGLE_APPLICATION_CREDENTIALS")
+    @classmethod
+    def _resolve_credentials_path(cls, v: str) -> str:
+        """.env gives this relative to the repo root (./secrets/...), but the
+        service is started from bus_eta/. Resolve it against the repo root so it
+        works from any directory."""
+        if not v or Path(v).is_absolute():
+            return v
+        return str((_ENV_FILE.parent / v).resolve())
 
 
 settings = Settings()

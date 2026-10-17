@@ -9,13 +9,8 @@ from app import firebase_client
 from app.main import app
 
 client = TestClient(app)
-PNG = ("img.png", b"\x89PNG\r\n", "image/png")
 
 PROTECTED = [
-    ("post", "/iris/enroll", {"data": {"student_id": "s1"}, "files": {"image": PNG}}),
-    ("post", "/recognize/once", {}),
-    ("post", "/stream/start", {}),
-    ("post", "/stream/stop", {}),
     ("post", "/admin/accounts/deactivate", {"json": {"uid": "u1"}}),
 ]
 
@@ -32,13 +27,6 @@ def test_non_admin_token_is_403(monkeypatch, method, path, kwargs):
     monkeypatch.setattr(firebase_client, "require_admin_uid", deny)
     resp = getattr(client, method)(path, headers={"Authorization": "Bearer x"}, **kwargs)
     assert resp.status_code == 403
-
-
-def test_enroll_with_admin_token_reaches_handler(monkeypatch):
-    monkeypatch.setattr(firebase_client, "require_admin_uid", lambda t: "admin-uid")
-    resp = client.post("/iris/enroll", headers={"Authorization": "Bearer x"},
-                       data={"student_id": "s1"}, files={"image": PNG})
-    assert resp.status_code == 400  # past auth; the fake PNG is not decodable
 
 
 def test_deactivate_disables_auth_user(monkeypatch):

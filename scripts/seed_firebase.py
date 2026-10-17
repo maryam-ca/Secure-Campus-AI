@@ -4,9 +4,6 @@ Seeds the initial practical dataset described in the project spec
 courses, and bus stops - as ordinary Firestore/Auth/RTDB records that
 Admin can edit afterward, not as hardcoded app data.
 
-This does NOT enroll iris profiles (that requires an actual captured
-eye image per student and goes through the iris_ai service's
-POST /iris/enroll - see docs/IRIS_MODEL.md).
 
 Reuses iris_ai/app/firebase_client.py::create_account() for every
 account created here (fixed after audit - see docs/AUDIT_REPORT.md
@@ -96,7 +93,7 @@ def main() -> None:
     print("\n== Courses ==")
     for c in COURSES:
         fs.collection("courses").document(c["id"]).set({
-            "id": c["id"], "name": c["name"], "cameraId": "", "schedule": [],
+            "id": c["id"], "name": c["name"], "schedule": [],
         }, merge=True)
         print(f"  {c['id']} - {c['name']}")
 
@@ -143,9 +140,7 @@ def main() -> None:
     if DATABASE_URL:
         rtdb.reference(f"driverAssignments/{driver_uid}").set("BUS-001")
 
-    print("\nDone. Iris enrollment for each student must still be done via "
-          "POST /iris/enroll on the iris_ai service with a real captured eye image "
-          "(see docs/IRIS_MODEL.md and README section on enrollment).")
+    print("\nDone.")
 
 
 if __name__ == "__main__":

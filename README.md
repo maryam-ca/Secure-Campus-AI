@@ -1,10 +1,16 @@
 # SecureCampus — Smart Campus Security & Management System
 
 A Final Year Project: a Flutter app with five role-based portals (Admin,
-Student, Security, Librarian, Driver), a Firebase backend, a standalone
-Python computer-vision service that does real iris recognition for
-classroom attendance and gate entry, a Python bus-ETA service, and a
-scheduled Cloud Function for overdue-library notifications.
+Student, Security, Librarian, Driver), a Firebase backend, a small Python
+service for account management, a Python bus-ETA service, and a scheduled
+job for overdue-library notifications.
+
+**This branch (`main`) is Phase 1.** Phase 2 (iris recognition for class
+attendance and gate entry, with the camera, Admin camera control, gate and
+security alerts, and student attendance) is on the **`phase-2`** branch and is
+not included here. In the app, Phase 2 items appear only as locked "Under
+development" menu entries and greyed cards, with no data and no code behind
+them.
 
 **Read `docs/LIMITATIONS.md` and `docs/AUDIT_REPORT.md` first.** They
 state plainly what has been built, tested, and fixed in this
@@ -47,20 +53,20 @@ than the floors above, upgrade before proceeding.
 
 ## 2. Project overview
 
-Admin creates students/courses/books/the bus and controls the live
-recognition camera; students see only their own data (attendance,
-library, bus assignment — never gate history or the live bus map);
-Security sees gate entries and unknown-person alerts; Librarian
-issues/returns books via QR; the one Driver shares live GPS while a
-trip is active; overdue-book notifications and the bus 10-minute alert
-run as real server-side jobs, not client-side checks.
+Admin creates students, courses, books, the bus stops and the campus
+location; students see only their own data (courses, library, bus
+assignment, alerts — never the live bus map); Security sees the found-card
+reports (read only); Librarian issues/returns books via QR; the one Driver
+shares live GPS while a trip is active; overdue-book notifications and the
+bus 10-minute alert run as real server-side jobs, not client-side checks.
 
 ## 3. Architecture
 
 See `docs/ARCHITECTURE.md` for the full data-flow diagram. Four
 backend pieces, three languages by design:
-- **`iris_ai/`** (Python/FastAPI) — camera, iris recognition, admin
-  account creation, camera controls.
+- **`iris_ai/`** (Python/FastAPI) — in Phase 1 this is the account service
+  (admin account creation). The camera and iris recognition code is on the
+  `phase-2` branch; the folder keeps its name so scripts and Docker still work.
 - **`bus_eta/`** (Python) — continuous GPS-to-ETA polling loop; a
   continuous loop doesn't fit Cloud Functions' execution model, hence
   a standalone service like `iris_ai`.
@@ -70,9 +76,8 @@ backend pieces, three languages by design:
   Node.js) keeps the whole backend in one language.
 - **Flutter app** (`mobile/`) — talks to Firestore/RTDB/Storage
   directly for everything permitted by security rules, and to
-  `iris_ai`'s REST API only for the two things a client fundamentally
-  can't do itself: creating Firebase Auth accounts and controlling the
-  live recognition loop.
+  `iris_ai`'s REST API only for the thing a client fundamentally
+  can't do itself: creating Firebase Auth accounts.
 
 ## 4. Setup — first time
 
@@ -110,8 +115,7 @@ Or via Docker: `docker compose up --build` (starts both services;
 `functions/` is deployed separately via the Firebase CLI above, not
 run locally the same way).
 
-Verify `iris_ai` is up: `curl http://localhost:8000/health` and
-`curl http://localhost:8000/camera/status`.
+Verify `iris_ai` is up: `curl http://localhost:8000/health`.
 
 ### 4.3 Seed the initial dataset
 
@@ -125,32 +129,10 @@ same account-creation path (`iris_ai/app/firebase_client.py::create_account`)
 the Admin portal uses, including the race-safe registration-number
 uniqueness check.
 
-### 4.4 iPhone 13 RTSP camera
+### 4.4 Iris and camera (Phase 2)
 
-1. Install **RTSP & RTMP Cam — OctoStream** from the App Store.
-2. Connect the iPhone and the machine running `iris_ai` to the **same
-   Wi-Fi network**.
-3. Open the app, enable the camera, start the RTSP server.
-4. Copy the RTSP URL it shows you.
-5. Put it in `.env` as `CAMERA_RTSP_URL` (never hardcode it — it changes
-   with your network).
-6. Restart `iris_ai` and check `/camera/status` reports `ONLINE`.
-7. Position the phone at the classroom entrance (attendance) or the
-   gate (entry verification), with good, even, direct lighting — see
-   `docs/IRIS_MODEL.md` §5 for why lighting matters more on this RGB
-   camera than it would on a dedicated NIR iris sensor.
-
-### 4.5 Iris enrollment
-
-From the Admin portal (Students → tap a student → "Enroll Iris",
-camera capture via `image_picker`) once the app is running, or
-directly:
-
-```
-curl -X POST http://localhost:8000/iris/enroll \
-  -F "student_id=<firebase-uid>" \
-  -F "image=@/path/to/eye_photo.jpg"
-```
+The RTSP camera setup and iris enrollment are Phase 2 and are on the
+`phase-2` branch, not in this branch.
 
 ### 4.6 Flutter app
 
@@ -175,10 +157,9 @@ flutter run --dart-define=BACKEND_BASE_URL=http://192.168.1.50:8000
 ```
 
 The Admin portal is the natural starting point once the app runs: add
-courses (with camera ID + schedule), add bus stops, create
-Security/Librarian/Driver accounts (each returns a one-time temporary
-password to relay to them), and use the new Camera section to start
-the live recognition loop instead of a manual curl call.
+courses (with a weekly schedule), set the campus location, add bus stops,
+and create Security/Librarian/Driver accounts (each returns a one-time
+temporary password to relay to them).
 
 ## 5. Normal run (after first-time setup above)
 
@@ -200,7 +181,7 @@ to start locally for it day-to-day; redeploy with
 ## 6. Testing what's been verified in this build environment
 
 ```
-cd iris_ai   && PYTHONPATH=. pytest tests/ -v   # 7 tests, pipeline mechanics on synthetic images
+cd iris_ai   && PYTHONPATH=. pytest tests/ -v   # 7 tests: account endpoints and password rules
 cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 31 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
 cd .. && python scripts/generate_qr_codes.py    # regenerates + re-verifies all 5 QR codes
 cd functions && pip install -r requirements.txt --break-system-packages && python -c "import main"  # Cloud Function import-verifies
@@ -284,19 +265,13 @@ not been tried on a real bus trip.
 ## 7. Environment variables
 
 See `.env.example` — every configurable value (Firebase project, RTDB
-URL, camera URL/name/location, iris threshold, cooldown/dedupe windows,
-bus ETA polling/threshold/speed, map API key) with comments. Never
+URL, bus ETA polling/threshold/speed, map API key) with comments. Never
 commit a filled-in `.env`. Note: the Admin live bus map needs a
 *separate* native Google Maps API key (not in `.env` — see
 `docs/MOBILE_PLATFORM_SETUP.md` §4).
 
 ## 8. Troubleshooting
 
-- **`/camera/status` says `NOT_CONFIGURED`** — `CAMERA_RTSP_URL` is
-  empty in `.env`. Fill it in from the OctoStream app.
-- **`/camera/status` says `OFFLINE`** — URL is set but unreachable;
-  confirm phone + machine are on the same Wi-Fi and OctoStream's
-  server is actually running.
 - **Firebase calls raise `FirebaseNotConfiguredError`** —
   `GOOGLE_APPLICATION_CREDENTIALS` isn't set or the file doesn't exist.
 - **`/admin/accounts` or `/stream/start` returns 401/403** — these now
@@ -316,16 +291,11 @@ commit a filled-in `.env`. Note: the Admin live bus map needs a
 
 ## 9. Security considerations
 
-- Biometric templates (`irisProfiles`) and registration-number
-  reservations (`registrationNumbers`) are unreadable by every client
-  role, including Admin — only the trusted Admin-SDK-backed `iris_ai`
-  service touches them.
-- Unknown-person images are **not public** (fixed after audit — see
-  `docs/AUDIT_REPORT.md` "Security Issues" #1): only a private Storage
-  path is stored; the app resolves a viewing URL live via
-  `getDownloadURL()`, itself gated by `storage.rules` to Admin/Security.
-- Gate entries and the live bus map are never exposed to students,
-  enforced independently in the Flutter router and Firestore/RTDB rules.
+- Registration-number reservations (`registrationNumbers`) are unreadable by
+  every client role, including Admin — only the trusted Admin-SDK-backed
+  backend service touches them.
+- The live bus map is never exposed to students, enforced independently in
+  the Flutter router and the Realtime Database rules.
 - Registration numbers are uniqueness-enforced via a race-safe Firestore
   transaction, not just client-side validation (fixed after audit).
 - `driverLocation` RTDB writes are field-whitelisted; unexpected keys
@@ -356,9 +326,7 @@ real check.
 2. Deploy Firebase rules + the Cloud Function, run the seed script,
    generate `firebase_options.dart`.
 3. Configure the native Google Maps API key.
-4. Iris-enroll the 10 real students and calibrate
-   `IRIS_MATCH_THRESHOLD` (`docs/IRIS_MODEL.md` §6).
-5. Connect the real iPhone RTSP stream; test attendance/gate capture
-   via the Admin portal's new Camera controls.
-6. Test the Driver portal's GPS, the bus ETA job, and the overdue-book
+4. Phase 2 (branch `phase-2`): iris enrollment, camera, attendance and gate
+   entry, once the camera hardware is available.
+5. Test the Driver portal's GPS, the bus ETA job, and the overdue-book
    Cloud Function against real data and a real schedule.

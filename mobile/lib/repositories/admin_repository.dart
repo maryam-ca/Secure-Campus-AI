@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
-import 'package:intl/intl.dart';
 import '../core/utils/lost_card_match.dart';
 import '../models/admin_models.dart';
 import '../models/transport_models.dart';
@@ -30,18 +29,8 @@ class AdminRepository {
   // Dashboard (spec §41 - every figure is a real, live query)
   // ---------------------------------------------------------------
   Future<AdminDashboardStats> fetchDashboardStats({String busId = 'BUS-001'}) async {
-    final now = DateTime.now();
-    final todayStr = DateFormat('yyyy-MM-dd').format(now);
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
     final results = await Future.wait([
       _count(_db.collection('students')),
-      _count(_db.collection('attendance').where('date', isEqualTo: todayStr)),
-      _count(_db.collection('gateEntries')
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))),
-      _count(_db.collection('securityAlerts').where('status', isEqualTo: 'NEW')),
       _count(_db.collection('books')),
       _count(_db.collection('libraryIssues').where('returned', isEqualTo: false)),
       fetchBusStatus(busId),
@@ -49,12 +38,9 @@ class AdminRepository {
 
     return AdminDashboardStats(
       totalStudents: results[0] as int,
-      todayAttendance: results[1] as int,
-      todayGateEntries: results[2] as int,
-      openUnknownAlerts: results[3] as int,
-      totalBooks: results[4] as int,
-      issuedBooks: results[5] as int,
-      busStatus: results[6] as String,
+      totalBooks: results[1] as int,
+      issuedBooks: results[2] as int,
+      busStatus: results[3] as String,
     );
   }
 
@@ -87,7 +73,6 @@ class AdminRepository {
   Future<void> upsertCourse(AdminCourseModel course) {
     return _db.collection('courses').doc(course.id).set({
       'name': course.name,
-      'cameraId': course.cameraId,
       'schedule': course.schedule.map((s) => s.toMap()).toList(),
     }, SetOptions(merge: true));
   }
@@ -209,19 +194,6 @@ class AdminRepository {
   // Gate entries / security alerts (Admin's read-only oversight view -
   // Security has its own portal for day-to-day handling)
   // ---------------------------------------------------------------
-  Stream<List<GateEntryModel>> watchRecentGateEntries({int limit = 50}) {
-    return _db.collection('gateEntries').orderBy('timestamp', descending: true).limit(limit).snapshots().map(
-        (s) => s.docs.map(GateEntryModel.fromFirestore).toList());
-  }
-
-  Stream<List<SecurityAlertModel>> watchSecurityAlerts({int limit = 50}) {
-    return _db.collection('securityAlerts').orderBy('createdAt', descending: true).limit(limit).snapshots().map(
-        (s) => s.docs.map(SecurityAlertModel.fromFirestore).toList());
-  }
-
-  Future<void> setAlertStatus(String alertId, bool resolved) {
-    return _db.collection('securityAlerts').doc(alertId).update({'status': resolved ? 'RESOLVED' : 'NEW'});
-  }
 
   // ---------------------------------------------------------------
   // Lost card reports

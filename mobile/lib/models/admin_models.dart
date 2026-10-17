@@ -19,17 +19,15 @@ class ScheduleSlot {
 class AdminCourseModel {
   final String id;
   final String name;
-  final String cameraId;
   final List<ScheduleSlot> schedule;
 
-  const AdminCourseModel({required this.id, required this.name, required this.cameraId, required this.schedule});
+  const AdminCourseModel({required this.id, required this.name, required this.schedule});
 
   factory AdminCourseModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
     return AdminCourseModel(
       id: doc.id,
       name: data['name'] as String? ?? doc.id,
-      cameraId: data['cameraId'] as String? ?? '',
       schedule: (data['schedule'] as List? ?? const [])
           .map((s) => ScheduleSlot.fromMap(Map<String, dynamic>.from(s as Map)))
           .toList(),
@@ -123,76 +121,6 @@ class BookLockEvent {
 
   factory BookLockEvent.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) =>
       BookLockEvent.fromMap(doc.id, doc.data() ?? {});
-}
-
-class GateEntryModel {
-  final String id;
-  final String studentId;
-  final String registrationNumber;
-  final String name;
-  final double recognitionScore;
-  final String cameraLocation;
-  final DateTime? timestamp;
-
-  const GateEntryModel({
-    required this.id,
-    required this.studentId,
-    required this.registrationNumber,
-    required this.name,
-    required this.recognitionScore,
-    required this.cameraLocation,
-    required this.timestamp,
-  });
-
-  factory GateEntryModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? {};
-    return GateEntryModel(
-      id: doc.id,
-      studentId: data['studentId'] as String? ?? '',
-      registrationNumber: data['registrationNumber'] as String? ?? '',
-      name: data['name'] as String? ?? '',
-      recognitionScore: (data['recognitionScore'] as num?)?.toDouble() ?? 0.0,
-      cameraLocation: data['cameraLocation'] as String? ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
-    );
-  }
-}
-
-enum SecurityAlertStatus { newAlert, resolved }
-
-class SecurityAlertModel {
-  final String id;
-  final String cameraLocation;
-  final String imagePath;
-  final double bestMatchScore;
-  final SecurityAlertStatus status;
-  final DateTime? createdAt;
-
-  const SecurityAlertModel({
-    required this.id,
-    required this.cameraLocation,
-    required this.imagePath,
-    required this.bestMatchScore,
-    required this.status,
-    required this.createdAt,
-  });
-
-  factory SecurityAlertModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? {};
-    final statusStr = data['status'] as String? ?? 'NEW';
-    return SecurityAlertModel(
-      id: doc.id,
-      cameraLocation: data['cameraLocation'] as String? ?? '',
-      // Deliberately a Storage *path*, not a public URL (fixed post-audit
-      // - see docs/AUDIT_REPORT.md "Security Issues" #1). The viewing URL
-      // is obtained live via FirebaseStorage.ref(imagePath).getDownloadURL(),
-      // which storage.rules actually gates to admin/security per call.
-      imagePath: data['imagePath'] as String? ?? '',
-      bestMatchScore: (data['bestMatchScore'] as num?)?.toDouble() ?? 0.0,
-      status: statusStr == 'RESOLVED' ? SecurityAlertStatus.resolved : SecurityAlertStatus.newAlert,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-    );
-  }
 }
 
 class LostCardReportModel {
@@ -367,18 +295,12 @@ class LibrarianIssueRow {
 /// query in admin_repository.dart / admin_providers.dart.
 class AdminDashboardStats {
   final int totalStudents;
-  final int todayAttendance;
-  final int todayGateEntries;
-  final int openUnknownAlerts;
   final int totalBooks;
   final int issuedBooks;
   final String busStatus; // "Trip Active" | "Idle" | "GPS Unavailable"
 
   const AdminDashboardStats({
     required this.totalStudents,
-    required this.todayAttendance,
-    required this.todayGateEntries,
-    required this.openUnknownAlerts,
     required this.totalBooks,
     required this.issuedBooks,
     required this.busStatus,

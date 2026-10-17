@@ -8,8 +8,8 @@ import '../../models/student_model.dart';
 import '../../providers/admin_providers.dart';
 import '../../providers/admin_student_providers.dart';
 
-/// Read-only overview of one student for the Admin: profile, courses with
-/// attendance, library loans and bus stop, all on one page.
+/// Read-only overview of one student for the Admin: profile, courses,
+/// library loans and bus stop, all on one page.
 class AdminStudentOverviewScreen extends ConsumerWidget {
   final StudentModel student;
   const AdminStudentOverviewScreen({super.key, required this.student});
@@ -65,14 +65,9 @@ class AdminStudentOverviewScreen extends ConsumerWidget {
                 color: active == false ? AppColors.error : AppColors.success,
                 icon: active == false ? Icons.block : Icons.check_circle_outline,
               ),
-              _Chip(
-                label: student.irisEnrolled ? 'Iris enrolled' : 'Iris not enrolled',
-                color: student.irisEnrolled ? AppColors.success : AppColors.warning,
-                icon: student.irisEnrolled ? Icons.verified_user_outlined : Icons.warning_amber_outlined,
-              ),
             ],
           ),
-          _Heading('Courses and attendance'),
+          _Heading('Courses'),
           if (student.courseIds.isEmpty)
             const _Empty('Not registered in any course.')
           else
@@ -81,8 +76,6 @@ class AdminStudentOverviewScreen extends ConsumerWidget {
                 children: [
                   for (final id in student.courseIds)
                     _CourseRow(
-                      studentUid: student.uid,
-                      courseId: id,
                       courseName: courses.where((c) => c.id == id).map((c) => c.name).firstOrNull ?? id,
                     ),
                 ],
@@ -143,35 +136,19 @@ class AdminStudentOverviewScreen extends ConsumerWidget {
   }
 }
 
-class _CourseRow extends ConsumerWidget {
-  final String studentUid;
-  final String courseId;
+class _CourseRow extends StatelessWidget {
   final String courseName;
-  const _CourseRow({required this.studentUid, required this.courseId, required this.courseName});
+  const _CourseRow({required this.courseName});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref
-        .watch(adminStudentAttendanceProvider((uid: studentUid, courseId: courseId, courseName: courseName)))
-        .valueOrNull;
-    final pct = summary?.percentage;
-
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
+          const Icon(Icons.menu_book_outlined, size: 18, color: AppColors.primaryBlue),
+          const SizedBox(width: 10),
           Expanded(child: Text(courseName, style: const TextStyle(fontWeight: FontWeight.w600))),
-          Text(
-            summary == null
-                ? '...'
-                : summary.totalSessions == 0
-                    ? 'no classes yet'
-                    : '${summary.present}/${summary.totalSessions} · ${pct!.round()}%',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: pct != null && pct < 75 ? AppColors.error : AppColors.bodyText,
-            ),
-          ),
         ],
       ),
     );

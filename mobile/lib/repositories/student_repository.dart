@@ -30,26 +30,6 @@ class StudentRepository {
     return snapshot.docs.map(CourseModel.fromFirestore).toList();
   }
 
-  /// Attendance % for one course, computed live from real `attendance`
-  /// and `classSessions` documents (spec §17 - never hardcoded).
-  /// Reactive to new attendance records for this student+course;
-  /// re-reads the total session count on each such change.
-  Stream<CourseAttendanceSummary> watchCourseAttendance(String studentId, CourseModel course) async* {
-    final presentQuery = _db
-        .collection('attendance')
-        .where('studentId', isEqualTo: studentId)
-        .where('courseId', isEqualTo: course.id);
-
-    await for (final presentSnapshot in presentQuery.snapshots()) {
-      final totalSnapshot = await _db.collection('classSessions').where('courseId', isEqualTo: course.id).get();
-      yield CourseAttendanceSummary(
-        course: course,
-        totalSessions: totalSnapshot.docs.length,
-        present: presentSnapshot.docs.length,
-      );
-    }
-  }
-
   Stream<BusAssignmentModel?> watchBusAssignment(String studentId) {
     return _db
         .collection('busAssignments')

@@ -27,7 +27,7 @@ class StudentPage {
 }
 
 /// Shows only the signed-in student's own data - profile, their own
-/// registered courses, their own attendance, their own bus assignment, their own
+/// registered courses, their own bus assignment, their own
 /// library records, their own notifications - each as its own page in the
 /// same sidebar layout as every other portal.
 /// Deliberately excludes everything spec §8 lists as off-limits: other
@@ -83,8 +83,7 @@ class StudentDashboardScreen extends ConsumerWidget {
             screen: const _StudentGate(child: NotificationsSection()),
           ),
         ],
-        // Attendance is taken by the iris camera, so it arrives in Phase 2.
-        // AttendanceSection is ready: give this item a `screen` to turn it on.
+        // Attendance is taken by the iris camera, so it arrives in Phase 2 (a locked menu entry only).
         planned: const PortalGroup(
           id: 'group.phase2',
           label: 'Phase 2',

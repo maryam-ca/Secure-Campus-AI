@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/course_model.dart';
 import '../models/dashboard_models.dart';
 import 'student_providers.dart';
 
@@ -22,15 +21,4 @@ final adminStudentLoansProvider = StreamProvider.autoDispose.family<List<Library
 
 final adminStudentBusProvider = StreamProvider.autoDispose.family<BusAssignmentModel?, String>((ref, uid) {
   return ref.watch(studentRepositoryProvider).watchBusAssignment(uid);
-});
-
-/// Key for [adminStudentAttendanceProvider]: plain values, so the same course
-/// reuses the same provider instance.
-typedef StudentCourseKey = ({String uid, String courseId, String courseName});
-
-final adminStudentAttendanceProvider =
-    StreamProvider.autoDispose.family<CourseAttendanceSummary, StudentCourseKey>((ref, key) {
-  return ref
-      .watch(studentRepositoryProvider)
-      .watchCourseAttendance(key.uid, CourseModel(id: key.courseId, name: key.courseName));
 });

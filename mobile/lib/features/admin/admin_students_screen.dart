@@ -1,8 +1,6 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/student_filter.dart';
@@ -26,7 +24,6 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  IrisFilter _iris = IrisFilter.all;
   int? _semester; // null = every semester
 
   @override
@@ -97,17 +94,9 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                 final students = filterStudents(
                   allStudents,
                   query: _query,
-                  iris: _iris,
                   semester: _semester,
                 );
-                final counts = irisCounts(allStudents);
                 final semesters = semestersIn(allStudents);
-
-                Widget chip(String label, IrisFilter value) => ChoiceChip(
-                  label: Text(label),
-                  selected: _iris == value,
-                  onSelected: (_) => setState(() => _iris = value),
-                );
 
                 return Column(
                   children: [
@@ -120,15 +109,6 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            chip('All (${counts.all})', IrisFilter.all),
-                            chip(
-                              'Iris enrolled (${counts.enrolled})',
-                              IrisFilter.enrolled,
-                            ),
-                            chip(
-                              'Not enrolled (${counts.notEnrolled})',
-                              IrisFilter.notEnrolled,
-                            ),
                             PopupMenuButton<int?>(
                               tooltip: 'Filter by semester',
                               onSelected: (v) => setState(() => _semester = v),
@@ -200,20 +180,9 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                                     ),
                                     title: Text(s.name),
                                     subtitle: Text(
-                                      '${s.registrationNumber} · ${s.program}, Sem ${s.semester}'
-                                      '${s.irisEnrolled ? '' : '  ·  Iris NOT enrolled'}',
+                                      '${s.registrationNumber} · ${s.program}, Sem ${s.semester}',
                                     ),
-                                    trailing: s.irisEnrolled
-                                        ? const Icon(
-                                            Icons.verified_user_outlined,
-                                            color: AppColors.success,
-                                            size: 20,
-                                          )
-                                        : const Icon(
-                                            Icons.warning_amber_outlined,
-                                            color: AppColors.warning,
-                                            size: 20,
-                                          ),
+                                    trailing: const Icon(Icons.chevron_right, size: 20),
                                     onTap: () => _openStudentDetailSheet(
                                       context,
                                       ref,
@@ -477,37 +446,6 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
   bool _busy = false;
   String? _message;
 
-  Future<void> _enrollIris() async {
-    final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 90,
-    );
-    if (picked == null) return;
-
-    setState(() {
-      _busy = true;
-      _message = null;
-    });
-    try {
-      final result = await ref
-          .read(backendApiServiceProvider)
-          .enrollIris(
-            studentId: widget.student.uid,
-            imageFile: File(picked.path),
-          );
-      setState(
-        () => _message = result['success'] == true
-            ? 'Iris enrolled successfully.'
-            : 'Enrollment did not succeed: ${result['reason']}',
-      );
-    } on BackendApiException catch (e) {
-      setState(() => _message = e.message);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _toggleActive(bool active) async {
     if (!active) {
       final confirmed = await showConfirmDialog(
@@ -563,29 +501,6 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    s.irisEnrolled
-                        ? Icons.verified_user_outlined
-                        : Icons.warning_amber_outlined,
-                    color: s.irisEnrolled
-                        ? AppColors.success
-                        : AppColors.warning,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      s.irisEnrolled
-                          ? 'Iris enrolled'
-                          : 'Iris not yet enrolled',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
                     isActive == false
                         ? Icons.block
                         : Icons.check_circle_outline,
@@ -634,11 +549,6 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                       },
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _enrollIris,
-                icon: const Icon(Icons.camera_alt_outlined),
-                label: Text(s.irisEnrolled ? 'Re-enroll Iris' : 'Enroll Iris'),
               ),
               if (isActive == false)
                 OutlinedButton.icon(

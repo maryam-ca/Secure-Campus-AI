@@ -6,7 +6,7 @@ rules_version = '2';
 // "admin" | "student" | "security" | "librarian" | "driver", plus
 // users/{uid}.active (bool). The Admin portal is the only place that
 // creates/deactivates accounts; the iris_ai service and Admin SDK
-// scripfts write to sensitive collections with the Admin SDK, which
+// scripts write to sensitive collections with the Admin SDK, which
 // bypasses these rules entirely - these rules exist to stop a
 // compromised or malicious *client* from reading/writing data outside
 // its role, per project spec section 39 ("Never rely only on Flutter
@@ -76,8 +76,7 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------
     // students - a student may read (never write) their own record.
-    // Admin manages all fields. Security can read (needed to display a
-    // matched name/registration number on a verified gate entry).
+    // Admin manages all fields.
     // Librarian can read (real bug fixed here - findStudentByRegistrationNumber()
     // in librarian_repository.dart queries this collection to look up who's
     // borrowing a book; without this, every single library-desk search
@@ -85,13 +84,13 @@ service cloud.firestore {
     // typed in was, because the query itself was permission-denied).
     // ---------------------------------------------------------------
     match /students/{studentId} {
-      allow read: if isAdmin() || isSecurity() || isLibrarian() || (isStudent() && request.auth.uid == studentId);
+      allow read: if isAdmin() || isLibrarian() || (isStudent() && request.auth.uid == studentId);
       allow write: if isAdmin();
     }
 
     // ---------------------------------------------------------------
     // courses - readable by any signed-in role that needs it
-    // (student for their own attendance %, admin for management).
+    // (a student for their own course list, admin for management).
     // ---------------------------------------------------------------
     match /courses/{courseId} {
       allow read: if isSignedIn();
@@ -103,59 +102,6 @@ service cloud.firestore {
     match /enrollments/{enrollmentId} {
       allow read: if isAdmin() || (isStudent() && resource.data.studentId == request.auth.uid);
       allow write: if isAdmin();
-    }
-
-    // ---------------------------------------------------------------
-    // irisProfiles - biometric data. No client, of any role including
-    // Admin, may read or write this directly; all access goes through
-    // the iris_ai service using the Admin SDK (server-side, bypasses
-    // these rules). This is intentional: "do not expose iris embeddings
-    // to students" is extended here to "do not expose them to any
-    // client app at all".
-    // ---------------------------------------------------------------
-    match /irisProfiles/{studentId} {
-      allow read, write: if false;
-    }
-
-    // ---------------------------------------------------------------
-    // attendance - a student reads only their own rows. Writes happen
-    // from the iris_ai service (Admin SDK); Admin may also
-    // create/correct records from the Admin portal.
-    // ---------------------------------------------------------------
-    match /attendance/{recordId} {
-      allow read: if isAdmin() || (isStudent() && resource.data.studentId == request.auth.uid);
-      allow write: if isAdmin();
-    }
-
-    // classSessions - a record that a real class actually happened for
-    // a course on a date (created by the iris_ai service via the Admin
-    // SDK the first time it records attendance that day). Readable by
-    // any signed-in user because students need the total-session count
-    // to compute their own attendance percentage (spec §17).
-    match /classSessions/{sessionId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // ---------------------------------------------------------------
-    // gateEntries - Admin + Security ONLY. Students must never read
-    // this collection (project spec section 22, final/non-negotiable).
-    // ---------------------------------------------------------------
-    match /gateEntries/{entryId} {
-      allow read: if isAdmin() || isSecurity();
-      allow write: if isAdmin();
-    }
-
-    // ---------------------------------------------------------------
-    // securityAlerts (unknown-person events) - Admin + Security can read.
-    // Only Admin may change an alert's status (resolve it); Security sees the
-    // result. Alerts themselves come from the iris_ai service, never a client.
-    // ---------------------------------------------------------------
-    match /securityAlerts/{alertId} {
-      allow read: if isAdmin() || isSecurity();
-      allow update: if isAdmin()
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
-      allow create, delete: if isAdmin();
     }
 
     // ---------------------------------------------------------------
