@@ -93,6 +93,7 @@ def run_once() -> int:
     _trip_was_active = True
     assignments = firebase_client.fetch_active_assignments_with_stops(settings.BUS_ID)
     sent = 0
+    eta_cache: dict[tuple[float, float], tuple[float, str]] = {}  # one routing call per stop per cycle
 
     for assignment in assignments:
         student_id = assignment.get("studentId")
@@ -102,12 +103,17 @@ def run_once() -> int:
         trip = location.trip_id
         final_sent = trip in (assignment.get("alertFinalTripId"), assignment.get("lastAlertTripId"))
 
-        eta_minutes, method = estimate_eta_minutes(
-            origin=(location.lat, location.lng),
-            dest=(assignment["stopLat"], assignment["stopLng"]),
-            avg_speed_kmh=settings.AVG_BUS_SPEED_KMH,
-            api_key=settings.MAP_API_KEY,
-        )
+        dest = (assignment["stopLat"], assignment["stopLng"])
+        if dest not in eta_cache:
+            eta_cache[dest] = estimate_eta_minutes(
+                origin=(location.lat, location.lng),
+                dest=dest,
+                avg_speed_kmh=settings.AVG_BUS_SPEED_KMH,
+                api_key=settings.MAP_API_KEY,
+                provider=settings.ROUTING_PROVIDER,
+                osrm_url=settings.OSRM_BASE_URL,
+            )
+        eta_minutes, method = eta_cache[dest]
 
         now = dt.datetime.now(dt.timezone.utc)
         shown_eta = max(0, round(eta_minutes))

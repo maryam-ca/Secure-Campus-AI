@@ -1,21 +1,25 @@
 """
-Distance/ETA calculation. Two real methods, never a made-up number:
+Distance/ETA calculation. Real methods, never a made-up number:
 
-1. `haversine_km` - real great-circle distance between two lat/lng
-   points. Always available, no external dependency.
-2. `fetch_routing_eta_minutes` - a real call to a routing API (Google
-   Distance Matrix-compatible) when MAP_API_KEY is configured, which
-   accounts for actual roads/traffic instead of a straight line.
+1. `fetch_routing_eta_minutes` - Google Distance Matrix, used when MAP_API_KEY
+   is set: real roads and live traffic. (Paid; needs a billing account.)
+2. `fetch_osrm_road_km` - free OpenStreetMap road routing (OSRM, no key): the
+   real road distance along the road network. The ETA is that road distance
+   divided by the assumed bus speed (AVG_BUS_SPEED_KMH), so it uses the same
+   speed assumption as the straight-line estimate but a real route. It does
+   not know about traffic.
+3. `haversine_km` - straight-line (great-circle) distance. Always available,
+   no external dependency. Used only when routing is switched off
+   (ROUTING_PROVIDER=straight) or the routing call fails.
 
-`estimate_eta_minutes` prefers the routing API and falls back to
-haversine distance / average speed only if no API key is configured or
-the API call fails - and the fallback is clearly a coarser estimate,
-not a hidden substitute pretending to be routing-accurate.
+`estimate_eta_minutes` tries them in that order and reports which one it used,
+so the coarser fallback is never presented as routing-accurate.
 """
 
 from __future__ import annotations
 
 import math
+import time
 
 import requests
 
@@ -69,14 +73,52 @@ def fetch_routing_eta_minutes(origin: tuple[float, float], dest: tuple[float, fl
         return None
 
 
+# After a failed OSRM call, skip it for a while so a down server does not slow
+# every polling cycle (each failed attempt can wait for the timeout).
+OSRM_RETRY_AFTER_SECONDS = 60.0
+_osrm_down_until = 0.0
+
+
+def fetch_osrm_road_km(origin: tuple[float, float], dest: tuple[float, float],
+                        base_url: str = "https://router.project-osrm.org", timeout_s: float = 5.0) -> float | None:
+    """Road distance in km along the real road network, from OpenStreetMap data
+    via OSRM. Returns None (never a fake number) if the call fails or no route
+    exists; the caller then falls back to the straight-line distance."""
+    global _osrm_down_until
+    if time.monotonic() < _osrm_down_until:
+        return None
+    try:
+        resp = requests.get(
+            f"{base_url.rstrip('/')}/route/v1/driving/{origin[1]},{origin[0]};{dest[1]},{dest[0]}",
+            params={"overview": "false"},
+            timeout=timeout_s,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") != "Ok":
+            return None
+        return float(data["routes"][0]["distance"]) / 1000.0
+    except (requests.RequestException, KeyError, IndexError, ValueError, TypeError):
+        _osrm_down_until = time.monotonic() + OSRM_RETRY_AFTER_SECONDS
+        return None
+
+
 def estimate_eta_minutes(origin: tuple[float, float], dest: tuple[float, float],
-                          avg_speed_kmh: float, api_key: str = "") -> tuple[float, str]:
-    """Returns (eta_minutes, method) where method is 'routing_api' or
-    'haversine_fallback' - callers can log/display which one was used
-    rather than presenting a fallback estimate as if it were precise."""
+                          avg_speed_kmh: float, api_key: str = "",
+                          provider: str = "osrm",
+                          osrm_url: str = "https://router.project-osrm.org") -> tuple[float, str]:
+    """Returns (eta_minutes, method). method is 'routing_api' (Google),
+    'osrm_road_distance' (real road distance / avg speed) or
+    'haversine_fallback' (straight line / avg speed), so callers can log or
+    display which one was used."""
     routing_eta = fetch_routing_eta_minutes(origin, dest, api_key) if api_key else None
     if routing_eta is not None:
         return routing_eta, "routing_api"
+
+    if provider == "osrm":
+        road_km = fetch_osrm_road_km(origin, dest, osrm_url)
+        if road_km is not None:
+            return fallback_eta_minutes(road_km, avg_speed_kmh), "osrm_road_distance"
 
     distance = haversine_km(*origin, *dest)
     return fallback_eta_minutes(distance, avg_speed_kmh), "haversine_fallback"

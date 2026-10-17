@@ -22,9 +22,13 @@ class Settings(BaseSettings):
     POLL_INTERVAL_SECONDS: float = 20.0
     # One alert per trip: "head to your stop" when the bus is this many minutes away.
     ALERT_THRESHOLD_MINUTES: float = 10.0
-    # Used only as a fallback ETA estimate when MAP_API_KEY is not set -
-    # a real routing API call (below) is preferred when available.
+    # Assumed average bus speed. ETA = distance / this speed. The distance is the
+    # real road distance (OSRM) or, if routing is off or fails, the straight line.
     AVG_BUS_SPEED_KMH: float = 25.0
+    # "osrm" = free OpenStreetMap road routing (default); "straight" = straight
+    # line only. A MAP_API_KEY (Google) takes priority over both.
+    ROUTING_PROVIDER: str = "osrm"
+    OSRM_BASE_URL: str = "https://router.project-osrm.org"
     # A driver location older than this is treated as lost (phone off, app killed,
     # no GPS): no alerts are sent from it and students are shown no live status.
     LOCATION_STALE_SECONDS: float = 180.0

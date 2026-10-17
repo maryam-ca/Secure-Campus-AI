@@ -194,3 +194,22 @@ def test_each_student_is_alerted_only_for_their_own_stop(monkeypatch):
     assert service.run_once() == 1
     fc.notify_student_bus.assert_called_once_with("near", "Near Stop", 8, FINAL)
     fc.mark_alert_sent.assert_called_once_with("a-near", "T1", FINAL)
+
+
+def test_students_at_the_same_stop_share_one_routing_lookup(monkeypatch):
+    fc = MagicMock()
+    fc.read_driver_location.return_value = SimpleNamespace(
+        trip_active=True, trip_id="T1", lat=1.0, lng=2.0, updated_at=time.time() * 1000)
+    fc.fetch_active_assignments_with_stops.return_value = [
+        {"id": f"a{i}", "studentId": f"s{i}", "stopName": "Block A", "stopLat": 3.0, "stopLng": 4.0} for i in range(3)
+    ]
+    monkeypatch.setattr(service, "firebase_client", fc)
+    lookups = []
+
+    def fake_eta(**kw):
+        lookups.append(kw["dest"])
+        return 8, "test"
+
+    monkeypatch.setattr(service, "estimate_eta_minutes", fake_eta)
+    assert service.run_once() == 3  # all three students are told
+    assert len(lookups) == 1        # but the road route was asked for once

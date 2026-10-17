@@ -196,9 +196,13 @@ Dependent Items" for the exact list.
 ### 6.1 Demonstrating the 10-minute bus alert (assessment)
 
 Each student gets **one** alert per trip, about 10 minutes before the bus
-reaches **their own stop** (`bus_eta/app/service.py`). The ETA is the
-straight-line distance from the bus to that stop divided by `AVG_BUS_SPEED_KMH`
-(25 km/h), unless `MAP_API_KEY` is set, in which case a routing API is used.
+reaches **their own stop** (`bus_eta/app/service.py`). The ETA is the **real
+road distance** from the bus to that stop (free OpenStreetMap routing, OSRM, no
+key) divided by `AVG_BUS_SPEED_KMH` (25 km/h). It does not know about traffic.
+If the routing server cannot be reached, it falls back to the straight-line
+distance, and the service log says which was used (`osrm_road_distance` or
+`haversine_fallback`). `ROUTING_PROVIDER=straight` turns routing off. A
+`MAP_API_KEY` (Google Distance Matrix, paid) takes priority and adds live traffic.
 
 **How the demo works.** The driver app, the Firebase writes, the `bus_eta`
 service, the ETA calculation and the student notification are all real. Only
@@ -236,31 +240,36 @@ python -m app.main
 5. Students at other stops get nothing, because their stops are more than
    10 minutes away.
 
-**Test positions** (about 3 km before the stop, roughly 7 minutes away)
+**Test positions** (on the GT Road, 3.5 km of road before the stop, so the
+ETA is about 8.4 min and inside the 10-minute window)
 
 | Stop | Latitude | Longitude | Expected |
 |---|---|---|---|
-| Hassan Abdal | 33.8168742 | 72.6532 | ETA about 7.2 min, alert to the Hassan Abdal students only |
-| Attock City Junction | 33.7745100 | 72.3191 | ETA about 7.2 min, alert to the Attock students only |
+| Hassan Abdal | 33.796714 | 72.714719 | ETA about 8.4 min, alert to the Hassan Abdal students only (Wah Cantt is 12.6 min away) |
+| Attock City Junction | 33.771699 | 72.378932 | ETA about 8.4 min, alert to the Attock students only |
 
-To test another stop, keep its latitude and subtract about 0.0325 from its
-longitude (3 km west at this latitude). Stops closer than 10 minutes to that
-point also alert, which is correct.
+Use a position **on the road**: the ETA follows the road, so a point that is
+close on the map but needs a long detour is not "10 minutes away". To make a
+test point for another stop, take a point on the same road about 3.5 km of
+road before the stop (a point from the OpenStreetMap route works). A stop
+within 10 minutes of that point also alerts, which is correct.
 
 **Repeat the demo.** The alert fires once per trip. Press **End Trip**, then
 **Start Trip** again (a new trip). When finished, press **End Trip** and set the
 DevTools Location back to "No override".
 
 **Optional: a real walk.** At 25 km/h a walker is "10 minutes away" only about
-4 km from the stop. For a walking demo set `AVG_BUS_SPEED_KMH=5` in `.env`
-(about 0.8 km) and restart `bus_eta`, say that you did, and set it back after.
+4 km (of road) from the stop. For a walking demo set `AVG_BUS_SPEED_KMH=5` in
+`.env` (about 0.8 km) and restart `bus_eta`, say that you did, and set it back after.
 
 **Backup.** Record the demo once beforehand and keep a screenshot of the log
 line. The unit tests also prove the rule (`cd bus_eta && pytest tests/`).
 
-**Limits to state honestly.** The ETA is a straight-line estimate, not road
-routing, and it does not know which stops the bus has already passed. It has
-not been tried on a real bus trip.
+**Limits to state honestly.** The ETA uses the real road distance but a fixed
+assumed speed, so it ignores traffic and stops on the way (Google routing with
+`MAP_API_KEY` adds traffic), and it does not know which stops the bus has already
+passed. The public OSRM server is meant for light use. It has not been tried on
+a real bus trip.
 
 ## 7. Environment variables
 

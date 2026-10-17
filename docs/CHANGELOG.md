@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Bus ETA now uses real road distance (free OpenStreetMap routing)
+- **Type:** feature
+- **Areas:** bus_eta, docs
+- **What changed:** The ETA to a student's stop is now the real road distance from OSRM (OpenStreetMap routing, no key) divided by the assumed bus speed, instead of the straight-line distance. Order: Google (if `MAP_API_KEY` is set) → OSRM → straight line. If OSRM fails it falls back to straight line and pauses OSRM for 60 s. One routing call per stop per cycle. New settings `ROUTING_PROVIDER` (`osrm` | `straight`) and `OSRM_BASE_URL`. README demo positions changed to points on the GT Road.
+- **Files:** bus_eta/app/geo.py, config.py, service.py, tests/test_geo.py, tests/test_service.py, .env.example, README.md
+- **Verified by:** bus_eta pytest (38 passed); a live call to the public OSRM server for the demo positions (8.4 min to the target stop, road distance 3.5 km).
+- **Notes:** No traffic information; the public OSRM server is for light use. Not tried on a real trip. The `bus_eta` service must be restarted.
+
 ### 2026-10-18 — Phase 2 code moved to branch `phase-2`; `main` is Phase 1 only
 - **Type:** refactor
 - **Areas:** mobile, iris_ai, bus_eta, firebase, docs
