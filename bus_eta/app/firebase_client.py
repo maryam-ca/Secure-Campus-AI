@@ -101,19 +101,11 @@ def fetch_active_assignments_with_stops(bus_id: str) -> list[dict[str, Any]]:
 
 
 def mark_alert_sent(assignment_id: str, trip_id: str, stage: str) -> None:
-    """Records which reminder was sent for this trip so it is never repeated.
-    A final alert also marks the first one as handled."""
-    fields = {"alertFinalTripId": trip_id, "alertFirstTripId": trip_id} if stage == "final"         else {"alertFirstTripId": trip_id}
-    db().collection("busAssignments").document(assignment_id).update(fields)
+    """Records that the alert was sent for this trip so it is never repeated."""
+    db().collection("busAssignments").document(assignment_id).update({"alertFinalTripId": trip_id})
 
 
 _COPY = {
-    "first": {
-        "type": "BUS_20_MIN",
-        "title": "Get Ready - Bus Coming",
-        "message": "Your campus bus is about {eta} minutes from your stop ({stop}). Get ready to leave.",
-        "push": "Bus is about {eta} min from {stop} - get ready.",
-    },
     "final": {
         "type": "BUS_10_MIN",
         "title": "Bus Arriving Soon",

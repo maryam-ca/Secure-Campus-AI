@@ -33,7 +33,7 @@ Build the shared base first, then sign-in, then the admin features that create t
 | 10 | Admin: students (list, import, overview) | `features/admin` | 9 |
 | 11 | Admin: courses | `features/admin` | 10 |
 | 12 | Admin: library (books, QR codes) | `features/admin` | 3 |
-| 13 | Admin: bus (seats, stops, campus location, assignment) | `features/admin` | 10 |
+| 13 | Admin: bus (campus location, live map, assignment) and stops (route order) | `features/admin` | 10 |
 | 14 | Admin: home shell and dashboard | `features/admin` | 9 to 13 |
 
 ## Phase 1, part 2: library, transport, student portal, notifications

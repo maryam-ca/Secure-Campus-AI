@@ -1,20 +1,3 @@
-/// The bus itself: how many seats it has (set by the Admin).
-class BusInfo {
-  final String id;
-
-  /// Seating capacity; null until the Admin sets it.
-  final int? capacity;
-  final String? driverUid;
-
-  const BusInfo({required this.id, this.capacity, this.driverUid});
-
-  factory BusInfo.fromMap(String id, Map<String, dynamic> data) => BusInfo(
-        id: id,
-        capacity: (data['capacity'] as num?)?.toInt(),
-        driverUid: data['driverUid'] as String?,
-      );
-}
-
 /// Where the campus is: the destination of the morning trip and the start of
 /// the afternoon trip. Set once by the Admin (Firestore `config/transport`).
 class CampusLocation {

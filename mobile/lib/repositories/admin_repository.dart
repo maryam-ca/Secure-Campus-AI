@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
 import 'package:intl/intl.dart';
-import '../core/utils/bus_capacity.dart';
 import '../core/utils/lost_card_match.dart';
 import '../models/admin_models.dart';
 import '../models/transport_models.dart';
@@ -137,17 +136,6 @@ class AdminRepository {
     required String stopId,
     required String stopName,
   }) async {
-    // Over-capacity is BLOCKED here, with fresh data, not only in the screen.
-    final bus = await _db.collection('bus').doc(busId).get();
-    final capacity = BusInfo.fromMap(busId, bus.data() ?? {}).capacity;
-    final existing = await _db.collection('busAssignments').where('busId', isEqualTo: busId).get();
-    final why = cannotAssignReason(
-      capacity: capacity,
-      assignedStudentIds: existing.docs.map((d) => d.id),
-      studentId: studentId,
-    );
-    if (why != null) throw StateError(why);
-
     await _db.collection('busAssignments').doc(studentId).set({
       'studentId': studentId,
       'studentName': studentName,
@@ -155,14 +143,6 @@ class AdminRepository {
       'stopId': stopId,
       'stopName': stopName,
     });
-  }
-
-  Stream<BusInfo> watchBus(String busId) {
-    return _db.collection('bus').doc(busId).snapshots().map((s) => BusInfo.fromMap(busId, s.data() ?? {}));
-  }
-
-  Future<void> setBusCapacity(String busId, int capacity) {
-    return _db.collection('bus').doc(busId).set({'capacity': capacity}, SetOptions(merge: true));
   }
 
   Stream<CampusLocation?> watchCampus() {
@@ -178,6 +158,15 @@ class AdminRepository {
   Future<void> applyStopOrder(Map<String, int> newOrders) {
     final batch = _db.batch();
     newOrders.forEach((id, order) => batch.update(_db.collection('busStops').doc(id), {'order': order}));
+    return batch.commit();
+  }
+
+  /// Deletes one stop and renumbers the stops after it in the same batch, so
+  /// the route never has a gap. Admin only (firestore.rules).
+  Future<void> deleteBusStop(String stopId, Map<String, int> renumbered) {
+    final batch = _db.batch();
+    batch.delete(_db.collection('busStops').doc(stopId));
+    renumbered.forEach((id, order) => batch.update(_db.collection('busStops').doc(id), {'order': order}));
     return batch.commit();
   }
 

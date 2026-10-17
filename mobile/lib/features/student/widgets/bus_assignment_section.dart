@@ -74,8 +74,7 @@ class BusAssignmentSection extends ConsumerWidget {
                   BusStatusBanner(assignment: assignment),
                   const SizedBox(height: 12),
                   const Text(
-                    "You'll get an alert about 20 minutes before the bus reaches your stop (get ready), "
-                    'and another at about 10 minutes (head to your stop).',
+                    "You'll get one alert about 10 minutes before the bus reaches your stop.",
                     style: TextStyle(color: AppColors.bodyText, fontSize: 12.5),
                   ),
                 ],
@@ -136,7 +135,6 @@ class _BusStatusBannerState extends State<BusStatusBanner> {
     final info = widget.assignment.tripInfo(widget.clock());
     final (color, icon) = switch (info.level) {
       BusTripLevel.headOut => (AppColors.success, Icons.directions_run),
-      BusTripLevel.getReady => (AppColors.warning, Icons.alarm),
       BusTripLevel.onTheWay => (AppColors.primaryBlue, Icons.directions_bus_filled_outlined),
       BusTripLevel.idle => (AppColors.bodyText, Icons.info_outline),
     };

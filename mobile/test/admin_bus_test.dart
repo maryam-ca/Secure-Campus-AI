@@ -11,8 +11,8 @@ import 'package:securecampus/repositories/admin_repository.dart';
 class _FakeRepo implements AdminRepository {
   final List<Map<String, int>> orderCalls = [];
   final List<String> assigned = [];
-  int? savedSeats;
   String? failAssignWith;
+  bool failSaves = false;
 
   @override
   Future<String> fetchBusStatus(String busId) async => 'Idle';
@@ -21,7 +21,9 @@ class _FakeRepo implements AdminRepository {
   Future<void> applyStopOrder(Map<String, int> newOrders) async => orderCalls.add(newOrders);
 
   @override
-  Future<void> setBusCapacity(String busId, int capacity) async => savedSeats = capacity;
+  Future<void> setCampus(String name, double lat, double lng) async {
+    if (failSaves) throw Exception('[cloud_firestore/permission-denied] Missing or insufficient permissions.');
+  }
 
   @override
   Future<void> assignStudentToBus({
@@ -54,7 +56,6 @@ const _student = StudentModel(
 
 Future<_FakeRepo> _pump(
   WidgetTester tester, {
-  int? capacity,
   CampusLocation? campus,
   List<AdminBusAssignmentModel> assignments = const [],
 }) async {
@@ -69,7 +70,6 @@ Future<_FakeRepo> _pump(
       busStopsProvider.overrideWith((ref) => Stream.value([_stop('A', 1), _stop('B', 2), _stop('C', 3)])),
       busAssignmentsProvider.overrideWith((ref) => Stream.value(assignments)),
       driverLocationProvider.overrideWith((ref, id) => Stream.value(null)),
-      busInfoProvider.overrideWith((ref, id) => Stream.value(BusInfo(id: id, capacity: capacity))),
       campusLocationProvider.overrideWith((ref) => Stream.value(campus)),
       allStudentsProvider.overrideWith((ref) => Stream.value([_student])),
     ],
@@ -81,61 +81,55 @@ Future<_FakeRepo> _pump(
 }
 
 void main() {
-  testWidgets('shows seats and a prompt when the campus is not set', (tester) async {
-    await _pump(tester, capacity: 40, assignments: [
-      const AdminBusAssignmentModel(id: 's1', studentId: 's1', studentName: 'One', stopId: 'A', stopName: 'Stop A'),
-    ]);
-    expect(find.text('Seats 40 · Assigned 1 · Free 39'), findsOneWidget);
+  testWidgets('shows a prompt when the campus is not set, and no seat count anywhere', (tester) async {
+    await _pump(tester);
     expect(find.text('Campus location not set'), findsOneWidget);
+    expect(find.textContaining('seat'), findsNothing);
+    expect(find.textContaining('Seats'), findsNothing);
   });
 
-  testWidgets('prompts for the seat count when it is not set', (tester) async {
+  testWidgets('the campus dialog names the field that is wrong', (tester) async {
     await _pump(tester);
-    expect(find.text('0 assigned · seat count not set'), findsOneWidget);
+    await tester.tap(find.text('Set'));
+    await tester.pumpAndSettle();
+
+    // coordinates fine, name empty: only the name is flagged
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter the campus name'), findsOneWidget);
+    expect(find.text('A number from -90 to 90'), findsNothing);
+    expect(find.text('A number from -180 to 180'), findsNothing);
+
+    // name given, longitude out of range: only the longitude is flagged
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '200');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter the campus name'), findsNothing);
+    expect(find.text('A number from -180 to 180'), findsOneWidget);
+  });
+
+  testWidgets('a refused save says so instead of doing nothing', (tester) async {
+    final repo = await _pump(tester);
+    repo.failSaves = true;
+
+    await tester.tap(find.text('Set'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('campus-save-error')), findsOneWidget);
+    expect(find.textContaining('rules may not be published'), findsOneWidget);
+    expect(find.text('Campus location'), findsOneWidget); // dialog stays open
   });
 
   testWidgets('shows the campus once set', (tester) async {
     await _pump(tester, campus: const CampusLocation(name: 'CUI Attock', lat: 33.77, lng: 72.36));
     expect(find.text('CUI Attock'), findsOneWidget);
-  });
-
-  testWidgets('the Admin can save a seat count, and a bad number is rejected', (tester) async {
-    final repo = await _pump(tester, capacity: 40);
-    await tester.tap(find.text('Set seats'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const Key('seats-field')), '0');
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    expect(find.text('Enter a whole number from 1 to 200.'), findsOneWidget);
-    expect(repo.savedSeats, isNull);
-
-    await tester.enterText(find.byKey(const Key('seats-field')), '32');
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(repo.savedSeats, 32);
-  });
-
-  testWidgets('a full bus: the dialog stays open and says why', (tester) async {
-    final repo = await _pump(tester, capacity: 1);
-    repo.failAssignWith = 'This bus is full: all 1 seats are already assigned. Remove a student or raise the seat count first.';
-
-    await tester.tap(find.text('Assign'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Student'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ayesha Khan (FA23-BSE-001)').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Registered stop'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Stop A').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Assign'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('assign-error')), findsOneWidget);
-    expect(find.textContaining('bus is full'), findsOneWidget);
-    expect(repo.assigned, isEmpty);
-    expect(find.text('Assign Student to Bus'), findsOneWidget);
   });
 }

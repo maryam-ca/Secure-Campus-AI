@@ -22,8 +22,8 @@ log = logging.getLogger("bus_eta.main")
 
 
 def main() -> None:
-    log.info("bus_eta starting - bus_id=%s poll_interval=%ss first=%smin final=%smin",
-              settings.BUS_ID, settings.POLL_INTERVAL_SECONDS, settings.ALERT_FIRST_MINUTES, settings.ALERT_THRESHOLD_MINUTES)
+    log.info("bus_eta starting - bus_id=%s poll_interval=%ss alert=%smin",
+              settings.BUS_ID, settings.POLL_INTERVAL_SECONDS, settings.ALERT_THRESHOLD_MINUTES)
     while True:
         try:
             run_once()

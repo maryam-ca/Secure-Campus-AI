@@ -112,7 +112,7 @@ class AdminNav {
         PortalItem(
           id: AdminSection.bus,
           label: 'Buses',
-          description: 'Live map, seats, campus location and which students ride',
+          description: 'Live map, campus location and which students ride',
           icon: Icons.directions_bus_filled_outlined,
           screen: AdminBusScreen(),
         ),

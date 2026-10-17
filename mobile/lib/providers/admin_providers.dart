@@ -39,10 +39,6 @@ final busAssignmentsProvider = StreamProvider.autoDispose<List<AdminBusAssignmen
   return ref.watch(adminRepositoryProvider).watchBusAssignments();
 });
 
-final busInfoProvider = StreamProvider.autoDispose.family<BusInfo, String>((ref, busId) {
-  return ref.watch(adminRepositoryProvider).watchBus(busId);
-});
-
 final campusLocationProvider = StreamProvider.autoDispose<CampusLocation?>((ref) {
   return ref.watch(adminRepositoryProvider).watchCampus();
 });

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// How urgent the student's bus status is (drives the colour on screen).
-enum BusTripLevel { idle, onTheWay, getReady, headOut }
+enum BusTripLevel { idle, onTheWay, headOut }
 
 class BusTripInfo {
   final BusTripLevel level;
@@ -17,8 +17,7 @@ class BusAssignmentModel {
   /// A status older than this is treated as stale (the service stopped).
   static const staleAfter = Duration(minutes: 3);
 
-  /// Same thresholds the service uses for its two reminders.
-  static const getReadyMinutes = 20;
+  /// Same threshold the service uses for its one alert.
   static const headOutMinutes = 10;
 
   final String busId;
@@ -60,9 +59,6 @@ class BusAssignmentModel {
     if (eta <= 1) return const BusTripInfo(BusTripLevel.headOut, 'Your bus is arriving now.');
     if (eta <= headOutMinutes) {
       return BusTripInfo(BusTripLevel.headOut, 'About $eta min from your stop - head to your pickup point now.');
-    }
-    if (eta <= getReadyMinutes) {
-      return BusTripInfo(BusTripLevel.getReady, 'About $eta min from your stop - get ready.');
     }
     return BusTripInfo(BusTripLevel.onTheWay, 'On its way - about $eta min from your stop.');
   }
