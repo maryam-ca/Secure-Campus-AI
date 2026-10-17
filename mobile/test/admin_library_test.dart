@@ -26,7 +26,7 @@ IssueReportModel _report(String id, {String status = 'NEW'}) => IssueReportModel
       createdAt: null,
     );
 
-Future<void> _pump(WidgetTester tester, {List<IssueReportModel> reports = const []}) async {
+Future<void> _pump(WidgetTester tester, {List<IssueReportModel> reports = const [], int initialTab = 0}) async {
   await tester.pumpWidget(ProviderScope(
     overrides: [
       booksProvider.overrideWith((ref) => Stream.value(_books)),
@@ -34,44 +34,31 @@ Future<void> _pump(WidgetTester tester, {List<IssueReportModel> reports = const 
       activeIssuesProvider.overrideWith((ref) => Stream.value(const <LibrarianIssueRow>[])),
       issueReportsProvider.overrideWith((ref) => Stream.value(reports)),
     ],
-    child: const MaterialApp(home: Scaffold(body: AdminLibraryScreen())),
+    child: MaterialApp(home: Scaffold(body: AdminLibraryScreen(initialTab: initialTab))),
   ));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 }
 
 void main() {
-  testWidgets('Admin Library has Catalog and Reports tabs; Catalog is shown first', (tester) async {
+  testWidgets('Catalog is the default page and has no tab bar of its own', (tester) async {
     await _pump(tester);
 
-    expect(find.text('Catalog'), findsOneWidget);
-    expect(find.text('Reports'), findsOneWidget);
     expect(find.text('Algorithms'), findsOneWidget); // catalog content
     expect(find.text('Student reports'), findsNothing);
+    // the header bar's chips switch pages, so there must be no second Catalog / Reports pair here
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.text('Reports'), findsNothing);
   });
 
-  testWidgets('Reports tab shows the summary and the students\' reports', (tester) async {
-    await _pump(tester, reports: [_report('1')]);
+  testWidgets('the Reports page shows the summary and the student reports', (tester) async {
+    await _pump(tester, reports: [_report('1')], initialTab: 1);
 
-    await tester.tap(find.text('Reports'));
-    await tester.pumpAndSettle();
-
+    expect(find.byType(TabBar), findsNothing);
     expect(find.text('Student reports'), findsOneWidget);
     expect(find.text('Issued now'), findsOneWidget);
     expect(find.text('Locked'), findsOneWidget);
     expect(find.textContaining('Ayesha Khan'), findsOneWidget);
     expect(find.text('Mark resolved'), findsOneWidget);
-  });
-
-  testWidgets('the Reports tab carries a badge with the number of new reports', (tester) async {
-    await _pump(tester, reports: [_report('1'), _report('2'), _report('3', status: 'RESOLVED')]);
-
-    expect(find.byType(Badge), findsOneWidget);
-    expect(find.descendant(of: find.byType(Badge), matching: find.text('2')), findsOneWidget);
-  });
-
-  testWidgets('no badge when there are no new reports', (tester) async {
-    await _pump(tester);
-    expect(find.byType(Badge), findsNothing);
   });
 }
