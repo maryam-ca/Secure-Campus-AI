@@ -1,6 +1,3 @@
-import 'package:flutter/foundation.dart';
-
-import '../../config/demo_accounts.dart';
 import '../../models/app_user.dart';
 
 /// Where a signed-in, active account must go for the "first login: choose
@@ -11,9 +8,8 @@ import '../../models/app_user.dart';
 ///   there until it has changed the password.
 /// * Anyone else may open the screen voluntarily (Change password in the
 ///   menu); it is simply allowed.
-/// * [enforced] is false only in debug builds that carry the demo-accounts
-///   list, so the one-tap demo logins keep working while testing. Release
-///   builds always enforce it.
+/// * [enforced] is switched on for every build, so a temporary password must
+///   always be changed at first login.
 String? passwordGateRedirect({
   required AppUser user,
   required String location,
@@ -26,5 +22,5 @@ String? passwordGateRedirect({
   return null;
 }
 
-/// Whether the forced change is on for this build.
-bool get passwordChangeEnforced => !(kDebugMode && DemoAccounts.all.isNotEmpty);
+/// Whether the forced change is on for this build (always).
+bool get passwordChangeEnforced => true;
