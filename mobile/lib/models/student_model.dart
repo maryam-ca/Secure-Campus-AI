@@ -8,7 +8,6 @@ class StudentModel {
   final int semester;
   final String email;
   final List<String> courseIds;
-  final bool irisEnrolled;
 
   const StudentModel({
     required this.uid,
@@ -18,7 +17,6 @@ class StudentModel {
     required this.semester,
     required this.email,
     required this.courseIds,
-    required this.irisEnrolled,
   });
 
   factory StudentModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -31,7 +29,6 @@ class StudentModel {
       semester: (data['semester'] as num?)?.toInt() ?? 0,
       email: data['email'] as String? ?? '',
       courseIds: List<String>.from(data['courses'] as List? ?? const []),
-      irisEnrolled: data['irisEnrolled'] as bool? ?? false,
     );
   }
 }

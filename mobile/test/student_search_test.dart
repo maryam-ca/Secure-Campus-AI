@@ -10,7 +10,6 @@ StudentModel _s(String reg, String name) => StudentModel(
       semester: 5,
       email: '$reg@x.edu',
       courseIds: const [],
-      irisEnrolled: false,
     );
 
 final _students = [

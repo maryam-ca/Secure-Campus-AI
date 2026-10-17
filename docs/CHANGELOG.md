@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Phase 2 code moved to branch `phase-2`; `main` is Phase 1 only
+- **Type:** refactor
+- **Areas:** mobile, iris_ai, bus_eta, firebase, docs
+- **What changed:** The full code was saved on the `phase-2` branch (commit df14b9f). On `main` the iris and camera code, Admin camera control and Gate & Security screens, student attendance, Security gate screens, iris data on the student pages, per-course attendance, course camera ID, and the attendance/gate/iris/alert Firestore rules were removed. Phase 2 remains only as locked "Under development" menu entries and greyed cards. `iris_ai/` is now just the account service. `docs/IRIS_MODEL.md` and the camera/iris sections of the README were removed. bus_eta now resolves a relative `GOOGLE_APPLICATION_CREDENTIALS` against the repo root. See `docs/PHASE_SPLIT.md`.
+- **Files:** see `git show --stat` for the commit. Notable: mobile/lib (security, student, admin screens, models, providers, repositories), iris_ai/app, firebase/firestore.rules and its tests, README.md, .env.example, docs/PHASE_SPLIT.md.
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (180 passed), Firestore rules tests in the emulator (20 passed), iris_ai pytest (7 passed), bus_eta pytest (31 passed).
+- **Notes:** Firestore rules need publishing for the new rule set. Other docs (ARCHITECTURE, PROJECT_STATUS, etc.) still describe Phase 2 in places; they were not rewritten.
+
 ### 2026-10-17 — Bus: seat count removed (not part of the FYP); campus location only
 - **Type:** refactor
 - **Areas:** mobile

@@ -85,6 +85,5 @@ echo "  2. Put the service-account key at ./secrets/serviceAccountKey.json and f
 echo "  3. Run 'firebase deploy --only firestore:rules,storage:rules' from firebase/."
 echo "  4. Run 'python scripts/seed_firebase.py' to create the 10 students/books/bus/driver."
 echo "  5. Run 'flutterfire configure' inside mobile/."
-echo "  6. Install the RTSP camera app on the iPhone 13 and set CAMERA_RTSP_URL in .env."
 echo ""
 echo "Then run: ./run.sh"

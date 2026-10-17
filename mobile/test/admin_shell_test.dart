@@ -19,9 +19,6 @@ Future<ProviderContainer> _pump(WidgetTester tester, String page) async {
   final container = ProviderContainer(overrides: [
     dashboardStatsProvider.overrideWith((ref) async => const AdminDashboardStats(
           totalStudents: 1,
-          todayAttendance: 0,
-          todayGateEntries: 0,
-          openUnknownAlerts: 0,
           totalBooks: 1,
           issuedBooks: 0,
           busStatus: 'Idle',

@@ -34,11 +34,7 @@ class AdminCoursesScreen extends ConsumerWidget {
                   return Card(
                     child: ListTile(
                       title: Text(c.name),
-                      subtitle: Text(
-                        c.cameraId.isEmpty
-                            ? 'No camera assigned - attendance detection inactive for this course'
-                            : 'Camera: ${c.cameraId} · ${c.schedule.length} scheduled session(s)/week',
-                      ),
+                      subtitle: Text('${c.schedule.length} scheduled session(s)/week'),
                       trailing: const Icon(Icons.edit_outlined, size: 18),
                       onTap: () => showDialog(context: context, builder: (_) => _CourseDialog(existing: c)),
                     ),
@@ -61,7 +57,6 @@ class _CourseDialog extends ConsumerStatefulWidget {
 class _CourseDialogState extends ConsumerState<_CourseDialog> {
   late final TextEditingController _id;
   late final TextEditingController _name;
-  late final TextEditingController _cameraId;
   late List<ScheduleSlot> _slots;
   bool _submitting = false;
 
@@ -71,7 +66,6 @@ class _CourseDialogState extends ConsumerState<_CourseDialog> {
     final e = widget.existing;
     _id = TextEditingController(text: e?.id ?? '');
     _name = TextEditingController(text: e?.name ?? '');
-    _cameraId = TextEditingController(text: e?.cameraId ?? '');
     _slots = List.of(e?.schedule ?? const []);
   }
 
@@ -86,7 +80,6 @@ class _CourseDialogState extends ConsumerState<_CourseDialog> {
       await ref.read(adminRepositoryProvider).upsertCourse(AdminCourseModel(
             id: _id.text.trim(),
             name: _name.text.trim(),
-            cameraId: _cameraId.text.trim(),
             schedule: _slots,
           ));
       if (mounted) Navigator.of(context).pop();
@@ -114,13 +107,6 @@ class _CourseDialogState extends ConsumerState<_CourseDialog> {
               ),
               const SizedBox(height: 10),
               TextField(controller: _name, decoration: const InputDecoration(labelText: 'Course name')),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _cameraId,
-                decoration: const InputDecoration(
-                  labelText: 'Camera ID (must match CAMERA_NAME in iris_ai .env)',
-                ),
-              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

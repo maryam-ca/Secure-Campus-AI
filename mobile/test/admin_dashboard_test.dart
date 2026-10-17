@@ -13,11 +13,8 @@ import 'package:securecampus/providers/auth_provider.dart';
 import 'package:securecampus/providers/issue_report_providers.dart';
 import 'package:securecampus/providers/librarian_providers.dart';
 
-AdminDashboardStats _stats({int alerts = 2, String bus = 'Idle (last known position 3 days ago)'}) => AdminDashboardStats(
+AdminDashboardStats _stats({String bus = 'Idle (last known position 3 days ago)'}) => AdminDashboardStats(
       totalStudents: 10,
-      todayAttendance: 4,
-      todayGateEntries: 7,
-      openUnknownAlerts: alerts,
       totalBooks: 5,
       issuedBooks: 2,
       busStatus: bus,
@@ -122,8 +119,6 @@ void main() {
     for (final label in ['Attendance', 'Gate Entries']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('4'), findsNothing); // attendance count not shown
-    expect(find.text('7'), findsNothing); // gate count not shown
     expect(find.text('2 issued · 1 locked'), findsOneWidget); // library note: issued and locked together
     expect(find.text('10'), findsOneWidget); // total students
 
@@ -155,7 +150,7 @@ void main() {
     expect(find.textContaining('3 days ago'), findsOneWidget);
   });
 
-  testWidgets('"Needs attention" lists overdue books and new reports (unknown-person alerts return with Phase 2)', (tester) async {
+  testWidgets('"Needs attention" lists overdue books and new reports', (tester) async {
     await _pump(tester, loans: [_overdueLoan()], reports: [_report()]);
 
     expect(find.text('Needs attention'), findsOneWidget);
@@ -165,7 +160,7 @@ void main() {
   });
 
   testWidgets('shows "All clear" when nothing needs attention', (tester) async {
-    await _pump(tester, stats: _stats(alerts: 0));
+    await _pump(tester, stats: _stats());
 
     expect(find.textContaining('All clear'), findsOneWidget);
     expect(find.text('Needs attention'), findsNothing);

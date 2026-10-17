@@ -23,13 +23,6 @@ final studentCoursesProvider = FutureProvider<List<CourseModel>>((ref) async {
   return ref.watch(studentRepositoryProvider).fetchCourses(student.courseIds);
 });
 
-final courseAttendanceProvider =
-    StreamProvider.family<CourseAttendanceSummary, CourseModel>((ref, course) {
-  final student = ref.watch(studentProfileProvider).value;
-  if (student == null) return const Stream.empty();
-  return ref.watch(studentRepositoryProvider).watchCourseAttendance(student.uid, course);
-});
-
 final busAssignmentProvider = StreamProvider<BusAssignmentModel?>((ref) {
   final student = ref.watch(studentProfileProvider).value;
   if (student == null) return Stream.value(null);
@@ -52,30 +45,4 @@ final studentNotificationsProvider = StreamProvider<List<AppNotification>>((ref)
 final unreadNotificationsCountProvider = Provider<int>((ref) {
   final list = ref.watch(studentNotificationsProvider).valueOrNull ?? const <AppNotification>[];
   return list.where((n) => !n.isRead).length;
-});
-
-/// Present / total classes over all of the student's courses, or null until
-/// the course figures have loaded. `total` is 0 when no class has run yet.
-class AttendanceOverall {
-  final int present;
-  final int total;
-  final int courses;
-  const AttendanceOverall({required this.present, required this.total, required this.courses});
-
-  double? get percentage => total == 0 ? null : present / total * 100;
-}
-
-final overallAttendanceProvider = Provider<AttendanceOverall?>((ref) {
-  final courses = ref.watch(studentCoursesProvider).valueOrNull;
-  if (courses == null) return null;
-  var present = 0, total = 0, loaded = 0;
-  for (final c in courses) {
-    final s = ref.watch(courseAttendanceProvider(c)).valueOrNull;
-    if (s == null) continue;
-    loaded++;
-    present += s.present;
-    total += s.totalSessions;
-  }
-  if (loaded < courses.length) return null;
-  return AttendanceOverall(present: present, total: total, courses: courses.length);
 });

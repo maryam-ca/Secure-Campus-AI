@@ -11,21 +11,3 @@ class CourseModel {
     return CourseModel(id: doc.id, name: data['name'] as String? ?? doc.id);
   }
 }
-
-/// Computed entirely from real `attendance` documents at read time -
-/// never a stored/hardcoded percentage (spec §17).
-class CourseAttendanceSummary {
-  final CourseModel course;
-  final int totalSessions;
-  final int present;
-
-  const CourseAttendanceSummary({
-    required this.course,
-    required this.totalSessions,
-    required this.present,
-  });
-
-  int get absent => totalSessions - present;
-
-  double get percentage => totalSessions == 0 ? 0.0 : (present / totalSessions) * 100.0;
-}

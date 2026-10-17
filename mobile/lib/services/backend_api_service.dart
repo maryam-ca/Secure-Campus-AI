@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -13,7 +12,7 @@ class BackendApiException implements Exception {
   String toString() => message;
 }
 
-/// Talks to the iris_ai service's /admin/* and /iris/enroll endpoints.
+/// Talks to the backend service's /admin/* endpoints (account creation).
 /// Every call attaches the current Firebase ID token as a Bearer token;
 /// the backend independently re-verifies it and checks the caller is an
 /// active Admin (see iris_ai/app/admin_api.py) - this client does not
@@ -101,65 +100,6 @@ class BackendApiService {
 
     if (resp.statusCode != 200) {
       throw BackendApiException(_extractDetail(resp) ?? 'Update failed (${resp.statusCode}).');
-    }
-  }
-
-  Future<Map<String, dynamic>> enrollIris({required String studentId, required File imageFile}) async {
-    final token = await _idToken();
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/iris/enroll'))
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['student_id'] = studentId
-      ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-
-    final streamed = await request.send().timeout(const Duration(seconds: 30));
-    final resp = await http.Response.fromStream(streamed);
-
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Iris enrollment failed (${resp.statusCode}).');
-    }
-    return jsonDecode(resp.body) as Map<String, dynamic>;
-  }
-
-  // ---------------------------------------------------------------
-  // Camera / recognition-loop controls (spec audit §C - "Admin Camera
-  // Controls"). GET /camera/status is read-only and needs no auth;
-  // starting/stopping the recognition loop is gated to Admin same as
-  // account creation.
-  // ---------------------------------------------------------------
-
-  Future<Map<String, dynamic>> fetchCameraStatus() async {
-    final resp = await http.get(Uri.parse('$baseUrl/camera/status')).timeout(const Duration(seconds: 8));
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Could not reach the camera service (${resp.statusCode}).');
-    }
-    return jsonDecode(resp.body) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> fetchStreamStatus() async {
-    final resp = await http.get(Uri.parse('$baseUrl/stream/status')).timeout(const Duration(seconds: 8));
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Could not reach the camera service (${resp.statusCode}).');
-    }
-    return jsonDecode(resp.body) as Map<String, dynamic>;
-  }
-
-  Future<void> startStream(String mode) async {
-    final token = await _idToken();
-    final resp = await http
-        .post(Uri.parse('$baseUrl/stream/start?mode=$mode'), headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 10));
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Could not start recognition (${resp.statusCode}).');
-    }
-  }
-
-  Future<void> stopStream() async {
-    final token = await _idToken();
-    final resp = await http
-        .post(Uri.parse('$baseUrl/stream/stop'), headers: {'Authorization': 'Bearer $token'})
-        .timeout(const Duration(seconds: 10));
-    if (resp.statusCode != 200) {
-      throw BackendApiException(_extractDetail(resp) ?? 'Could not stop recognition (${resp.statusCode}).');
     }
   }
 
