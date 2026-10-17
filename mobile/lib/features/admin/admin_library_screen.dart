@@ -4,63 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/catalog_logic.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
-import '../../providers/issue_report_providers.dart';
 import '../librarian/librarian_reports_screen.dart';
 import '../library/book_lock_ui.dart';
 
 enum _AvailabilityFilter { all, available, issued, locked }
 
-/// Admin > Library: the book Catalog, and Reports (library summary plus the
-/// students' "I did not borrow this book" reports). The same Reports view the
-/// librarian sees; the admin can also mark a report resolved.
+/// Admin > Library, one page per sub-module: the book Catalog, or Reports
+/// (library summary plus the students' "I did not borrow this book" reports,
+/// the same Reports view the librarian sees; the admin can also mark a report
+/// resolved). The header bar's Catalog / Reports chips switch between them, so
+/// this page has no tab bar of its own.
 class AdminLibraryScreen extends ConsumerWidget {
-  /// 0 = Catalog, 1 = Reports. The sidebar's Library > Reports opens tab 1.
+  /// 0 = Catalog, 1 = Reports. The sidebar's Library > Reports opens 1.
   final int initialTab;
   const AdminLibraryScreen({super.key, this.initialTab = 0});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final newReports =
-        ref
-            .watch(issueReportsProvider)
-            .valueOrNull
-            ?.where((r) => r.isOpen)
-            .length ??
-        0;
-
-    return DefaultTabController(
-      length: 2,
-      initialIndex: initialTab.clamp(0, 1),
-      child: Column(
-        children: [
-          Material(
-            color: Theme.of(context).colorScheme.surface,
-            child: TabBar(
-              tabs: [
-                const Tab(text: 'Catalog'),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Reports'),
-                      if (newReports > 0) ...[
-                        const SizedBox(width: 6),
-                        Badge(label: Text('$newReports')),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Expanded(
-            child: TabBarView(
-              children: [_AdminCatalogView(), LibrarianReportsScreen()],
-            ),
-          ),
-        ],
-      ),
-    );
+    return initialTab == 1 ? const LibrarianReportsScreen() : const _AdminCatalogView();
   }
 }
 

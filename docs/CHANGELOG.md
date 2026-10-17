@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Admin Library: removed the duplicate Catalog / Reports tabs
+- **Type:** fix
+- **Areas:** mobile
+- **What changed:** Library > Catalog and Library > Reports are separate pages with Catalog / Reports chips in the header bar, but each page also drew its own Catalog / Reports tab bar, so the choice appeared twice. The page's own tab bar is removed; the header chips switch pages. The "new reports" count badge that sat on that tab is gone (the dashboard's "new student reports" row still shows it).
+- **Files:** mobile/lib/features/admin/admin_library_screen.dart, mobile/test/admin_library_test.dart
+- **Verified by:** flutter analyze, flutter test (174 passed).
+
 ### 2026-10-18 — Removed the pre-filled "Demo accounts" from the login page
 - **Type:** refactor
 - **Areas:** mobile, scripts, docs
