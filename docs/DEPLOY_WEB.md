@@ -2,7 +2,7 @@
 
 Live site: https://securecampus-seven.vercel.app (Vercel project `securecampus`, account `maryamfatima454`, team `maryams-projects-791bda4b`).
 
-Vercel cannot build Flutter by itself, so the site is a **static upload of a release web build**. It is not auto-deployed from GitHub: pushing to `main` does not update it. Redeploy by hand after changes:
+Vercel cannot build Flutter by itself, so the site is a **static upload of a release web build**. It is not auto-deployed from GitHub: pushing to `main` does not update it. The repo's root `vercel.json` turns Vercel's own Git builds off (`git.deploymentEnabled: false`); without it, every push made Vercel try to build the repository itself, found no web output, and replaced the live site with a 404 page. Redeploy by hand after changes:
 
 ```
 cd mobile
