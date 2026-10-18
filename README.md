@@ -44,7 +44,7 @@ summary:
 | Dart | 3.13.x (ships with Flutter 3.47) | Same |
 | Firebase Flutter plugins | Floors from BoM 4.11.0 (2026-03-23), `^` constraints so `flutter pub get` resolves newer | firebase.google.com/support/release-notes/flutter (official, dated) |
 | Android | AGP ~9.2, Gradle ~9.5, Kotlin ~2.2, compileSdk 36, JDK 17 | Web search against developer.android.com — **not applied to a generated project**, since none exists here; verify against what `flutter create` actually produces |
-| Python (iris_ai / bus_eta / functions) | 3.12+ | **Actually installed and tested** — this repo's Python code was verified end-to-end on Python 3.12.3 |
+| Python (iris_ai / bus_eta / overdue_checker) | 3.12+ | **Actually installed and tested** — this repo's Python code was verified end-to-end on Python 3.12.3 |
 | FastAPI / OpenCV / NumPy / firebase-admin / etc. | Latest PyPI as of Sept 2026 | **Actually queried live from PyPI and installed** — not guessed (see `docs/VERSION_AUDIT.md`) |
 
 Run `flutter --version`, `dart --version`, and `python --version`
@@ -67,13 +67,11 @@ backend pieces, three languages by design:
 - **`iris_ai/`** (Python/FastAPI) — in Phase 1 this is the account service
   (admin account creation). The camera and iris recognition code is on the
   `phase-2` branch; the folder keeps its name so scripts and Docker still work.
-- **`bus_eta/`** (Python) — continuous GPS-to-ETA polling loop; a
-  continuous loop doesn't fit Cloud Functions' execution model, hence
-  a standalone service like `iris_ai`.
-- **`functions/`** (Python Cloud Functions, 2nd gen) — the overdue-book
-  scheduled check; a genuinely periodic job is exactly what Cloud
-  Functions' `onSchedule` is for, and keeping it in Python (not
-  Node.js) keeps the whole backend in one language.
+- **`bus_eta/`** (Python) — continuous GPS-to-ETA polling loop; sends the
+  one 10-minute bus alert per student per trip.
+- **`overdue_checker/`** (Python) — the periodic overdue-book and due-soon
+  check. It is a plain Python loop (not a Firebase Cloud Function, which
+  needs the paid Blaze plan), so the whole backend stays free-tier.
 - **Flutter app** (`mobile/`) — talks to Firestore/RTDB/Storage
   directly for everything permitted by security rules, and to
   `iris_ai`'s REST API only for the thing a client fundamentally
@@ -93,14 +91,10 @@ Auth/Firestore/RTDB/Storage, generate a service-account key, and:
 
 ```
 firebase use --add                 # links this repo to your project (writes .firebaserc)
-firebase deploy --only firestore:rules,firestore:indexes,storage:rules,database
-firebase deploy --only functions   # deploys the overdue-book scheduled Cloud Function
+firebase deploy --only firestore:rules,firestore:indexes,database
 ```
 
-`firebase.json` (repo root) already wires all four rule files and the
-`functions/` source — this file did not exist in an earlier build of
-this project, which meant `firebase deploy` could not have worked at
-all; it's included now.
+`firebase.json` (repo root) already wires the rule files.
 
 ### 4.2 Python services (`iris_ai`, `bus_eta`)
 
@@ -111,9 +105,7 @@ all; it's included now.
 ./run.sh        # or run.bat — starts bus_eta in the background, iris_ai in the foreground
 ```
 
-Or via Docker: `docker compose up --build` (starts both services;
-`functions/` is deployed separately via the Firebase CLI above, not
-run locally the same way).
+Or via Docker: `docker compose up --build` (starts all three services).
 
 Verify `iris_ai` is up: `curl http://localhost:8000/health`.
 
@@ -174,17 +166,12 @@ temporary password to relay to them).
 # user folder and builds that one instead.
 ```
 
-`functions/` runs on Firebase's infrastructure once deployed — nothing
-to start locally for it day-to-day; redeploy with
-`firebase deploy --only functions` after changing `functions/main.py`.
-
 ## 6. Testing what's been verified in this build environment
 
 ```
 cd iris_ai   && PYTHONPATH=. pytest tests/ -v   # 7 tests: account endpoints and password rules
-cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 31 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
+cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 38 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
 cd .. && python scripts/generate_qr_codes.py    # regenerates + re-verifies all 5 QR codes
-cd functions && pip install -r requirements.txt --break-system-packages && python -c "import main"  # Cloud Function import-verifies
 ```
 
 Everything else (Firebase-dependent calls against a live project, RTSP

@@ -63,7 +63,7 @@ class _IssueRow extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tell the librarian and security that you did not borrow "${issue.bookTitle}".'),
+            Text('Tell the librarian and the admin that you did not borrow "${issue.bookTitle}".'),
             const SizedBox(height: 12),
             TextField(
               controller: noteController,

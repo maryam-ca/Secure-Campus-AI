@@ -35,7 +35,6 @@ dependencies:
   firebase_auth: ^6.3.0
   cloud_firestore: ^6.2.0
   firebase_database: ^12.2.0
-  firebase_storage: ^13.2.0
   firebase_messaging: ^16.1.2
 
   # Driver GPS (real device location only — see driver feature)
@@ -52,7 +51,6 @@ dependencies:
   http: ^1.2.2
 
   # Admin: capturing an iris-enrollment photo from the device camera/gallery
-  image_picker: ^1.1.2
 
   # Admin live bus map (spec §17/§34): OpenStreetMap tiles - free, no API key,
   # no billing account (free-first rule D-7).
