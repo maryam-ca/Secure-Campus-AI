@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Found-card report: optional photo of the card (free tier)
+- **Type:** feature
+- **Areas:** mobile, firebase
+- **What changed:** The finder can attach a photo of the card (camera on a phone, gallery or file on the web), shrunk to at most about 580 KB. Name and registration number stay required; the photo is an extra. The photo is stored as a base64 string in its own Firestore document (`lostCardPhotos/{reportId}`), so no paid Storage plan is needed and Security, who can read reports, cannot read it. Admin sees a "View card photo" button on a report; the photo is deleted when the report is resolved or deleted. Rules: a report needs `finderUid == the caller` and a boolean `hasPhoto`; a photo can only be created in the same write as the finder's own report that says `hasPhoto`, with at most 800,000 characters and no extra fields.
+- **Files:** firebase/firestore.rules, firebase/rules-tests/firestore.rules.test.mjs, mobile/pubspec.yaml (image_picker back), lib/features/common/found_card_report_screen.dart, lib/features/admin/admin_lost_cards_screen.dart, lib/models/admin_models.dart, lib/repositories/admin_repository.dart, lib/providers/admin_providers.dart, test/lost_card_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (176 passed), Firestore rules tests in the emulator (24 passed). Not tried on a real phone camera.
+- **Notes:** The updated rules must be published to the live Firebase project before photos work there. Automatic reading of the name and number from the photo is not built.
+
 ### 2026-10-18 — Requirements audit and cleanup
 - **Type:** refactor
 - **Areas:** mobile, docs

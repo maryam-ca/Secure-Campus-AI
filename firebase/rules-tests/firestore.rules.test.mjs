@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const rules = readFileSync(join(here, '..', 'firestore.rules'), 'utf8');
@@ -187,7 +187,8 @@ test('only the admin adds, moves or removes a bus stop, with real coordinates', 
 // ---------------------------------------------------------------- found-card reports
 const foundReport = (over = {}) => ({
   studentName: 'Ayesha Khan', registrationNumber: 'FA23-BSE-001', location: 'Library',
-  description: '', notified: false, status: 'OPEN', createdAt: serverTimestamp(), ...over,
+  description: '', notified: false, status: 'OPEN', createdAt: serverTimestamp(),
+  finderUid: 'finder1', hasPhoto: false, ...over,
 });
 
 test('anyone signed in can file an OPEN report with a name and number; nothing else', async () => {
@@ -238,4 +239,72 @@ test('Security cannot read student records in Phase 1; the student and librarian
   await assertFails(getDoc(doc(as('sec1'), 'students/stu1')));
   await assertSucceeds(getDoc(doc(as('stu1'), 'students/stu1')));
   await assertSucceeds(getDoc(doc(as('lib1'), 'students/stu1')));
+});
+
+// ---------------------------------------------------------------- found-card photo
+const photoDoc = (over = {}) => ({ data: 'aGVsbG8=', createdAt: serverTimestamp(), ...over });
+
+test('a report must name its finder; the photo flag must be a boolean', async () => {
+  const finder = env.authenticatedContext('finder1').firestore();
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ finderUid: 'someone-else' })));
+  const { finderUid, ...withoutFinder } = foundReport(); // no finderUid field at all
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), withoutFinder));
+  await assertFails(addDoc(collection(finder, 'lostCardReports'), foundReport({ hasPhoto: 'yes' })));
+});
+
+test('the finder can attach a small photo, in the same write as their own report', async () => {
+  const finder = env.authenticatedContext('finder1').firestore();
+  const reportRef = doc(collection(finder, 'lostCardReports'));
+  const batch = writeBatch(finder);
+  batch.set(reportRef, foundReport({ hasPhoto: true }));
+  batch.set(doc(finder, 'lostCardPhotos', reportRef.id), photoDoc());
+  await assertSucceeds(batch.commit());
+});
+
+test('a photo is refused if the report does not say it has one, is someone else\'s, is too big or has extra fields', async () => {
+  const finder = env.authenticatedContext('finder1').firestore();
+
+  // report says hasPhoto: false
+  let ref = doc(collection(finder, 'lostCardReports'));
+  let batch = writeBatch(finder);
+  batch.set(ref, foundReport({ hasPhoto: false }));
+  batch.set(doc(finder, 'lostCardPhotos', ref.id), photoDoc());
+  await assertFails(batch.commit());
+
+  // too big (over 800,000 characters)
+  ref = doc(collection(finder, 'lostCardReports'));
+  batch = writeBatch(finder);
+  batch.set(ref, foundReport({ hasPhoto: true }));
+  batch.set(doc(finder, 'lostCardPhotos', ref.id), photoDoc({ data: 'A'.repeat(800001) }));
+  await assertFails(batch.commit());
+
+  // extra field
+  ref = doc(collection(finder, 'lostCardReports'));
+  batch = writeBatch(finder);
+  batch.set(ref, foundReport({ hasPhoto: true }));
+  batch.set(doc(finder, 'lostCardPhotos', ref.id), { ...photoDoc(), note: 'x' });
+  await assertFails(batch.commit());
+
+  // a photo for a report that belongs to someone else
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'lostCardReports/other'), foundReport({ finderUid: 'finder2', hasPhoto: true, createdAt: new Date() }));
+  });
+  await assertFails(setDoc(doc(finder, 'lostCardPhotos/other'), photoDoc()));
+  // and a photo with no report at all
+  await assertFails(setDoc(doc(finder, 'lostCardPhotos/nothing'), photoDoc()));
+});
+
+test('only the Admin reads or deletes a card photo; nobody can change one', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'lostCardReports/r9'), foundReport({ hasPhoto: true, createdAt: new Date() }));
+    await setDoc(doc(db, 'lostCardPhotos/r9'), { data: 'aGVsbG8=', createdAt: new Date() });
+  });
+  await assertSucceeds(getDoc(doc(as('admin1'), 'lostCardPhotos/r9')));
+  await assertFails(getDoc(doc(as('sec1'), 'lostCardPhotos/r9')));   // Security can read the report but never the photo
+  await assertFails(getDoc(doc(as('stu1'), 'lostCardPhotos/r9')));
+  await assertFails(getDoc(doc(env.authenticatedContext('finder1').firestore(), 'lostCardPhotos/r9')));
+  await assertFails(updateDoc(doc(as('admin1'), 'lostCardPhotos/r9'), { data: 'x' }));
+  await assertFails(deleteDoc(doc(as('sec1'), 'lostCardPhotos/r9')));
+  await assertSucceeds(deleteDoc(doc(as('admin1'), 'lostCardPhotos/r9')));
 });

@@ -136,6 +136,10 @@ class LostCardReportModel {
   final String status;
   final DateTime? resolvedAt;
 
+  /// The finder attached a photo of the card (kept in `lostCardPhotos`, which
+  /// only Admin can read).
+  final bool hasPhoto;
+
   const LostCardReportModel({
     required this.id,
     required this.studentNameGuess,
@@ -146,6 +150,7 @@ class LostCardReportModel {
     required this.createdAt,
     this.status = 'OPEN',
     this.resolvedAt,
+    this.hasPhoto = false,
   });
 
   bool get isResolved => status == 'RESOLVED';
@@ -174,6 +179,7 @@ class LostCardReportModel {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       status: data['status'] as String? ?? 'OPEN',
       resolvedAt: (data['resolvedAt'] as Timestamp?)?.toDate(),
+      hasPhoto: data['hasPhoto'] as bool? ?? false,
     );
   }
 }

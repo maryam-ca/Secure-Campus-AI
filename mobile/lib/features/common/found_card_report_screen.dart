@@ -1,9 +1,16 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/lost_card_match.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../providers/auth_provider.dart';
 
 /// Reached by anyone who taps "Found a student card? Report it" on the
@@ -30,6 +37,7 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
   final _location = TextEditingController();
   final _description = TextEditingController();
   DateTime _foundAt = DateTime.now();
+  Uint8List? _photo;
   bool _submitting = false;
   bool _submitted = false;
   String? _error;
@@ -44,6 +52,34 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
     if (picked != null) setState(() => _foundAt = picked);
   }
 
+  /// A photo of the card is optional. It is shrunk when picked and refused if it
+  /// is still too big to store in a Firestore document (kept under the rule's
+  /// 800,000-character limit once encoded as base64).
+  static const _maxPhotoBytes = 580000;
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 900,
+        maxHeight: 900,
+        imageQuality: 65,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (bytes.length > _maxPhotoBytes) {
+        setState(() => _error = 'That photo is too large. Take it again closer to the card, or choose a smaller one.');
+        return;
+      }
+      setState(() {
+        _photo = bytes;
+        _error = null;
+      });
+    } catch (_) {
+      setState(() => _error = 'Could not open the camera or the gallery.');
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -52,7 +88,12 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance.collection('lostCardReports').add({
+      final db = FirebaseFirestore.instance;
+      final reportRef = db.collection('lostCardReports').doc();
+      final batch = db.batch();
+      batch.set(reportRef, {
+        'finderUid': FirebaseAuth.instance.currentUser?.uid,
+        'hasPhoto': _photo != null,
         'studentName': _studentName.text.trim(),
         'registrationNumber': normalizeRegistration(_regNo.text),
         'status': 'OPEN',
@@ -62,6 +103,14 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
         'notified': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      if (_photo != null) {
+        // kept in its own document so Security, who can read reports, cannot read it
+        batch.set(db.collection('lostCardPhotos').doc(reportRef.id), {
+          'data': base64Encode(_photo!),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
       setState(() => _submitted = true);
       await ref.read(authServiceProvider).signOut();
     } catch (e) {
@@ -265,6 +314,13 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
                                 ),
                                 maxLines: 3,
                               ),
+                              const SizedBox(height: 14),
+                              _PhotoPicker(
+                                photo: _photo,
+                                onTake: kIsWeb ? null : () => _pickPhoto(ImageSource.camera),
+                                onChoose: () => _pickPhoto(ImageSource.gallery),
+                                onRemove: () => setState(() => _photo = null),
+                              ),
                               if (_error != null) ...[
                                 const SizedBox(height: 14),
                                 Container(
@@ -316,5 +372,66 @@ class _FoundCardReportScreenState extends ConsumerState<FoundCardReportScreen> {
     _location.dispose();
     _description.dispose();
     super.dispose();
+  }
+}
+
+
+/// "Add a photo of the card" (optional): take one with the camera (phone only)
+/// or choose one, with a preview and a way to remove it.
+class _PhotoPicker extends StatelessWidget {
+  final Uint8List? photo;
+  final VoidCallback? onTake;
+  final VoidCallback onChoose;
+  final VoidCallback onRemove;
+  const _PhotoPicker({required this.photo, required this.onTake, required this.onChoose, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    if (photo != null) {
+      return Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(photo!, key: const Key('photo-preview'), width: 88, height: 66, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(child: Text('Photo added. Only the Admin can see it.')),
+          TextButton(key: const Key('photo-remove'), onPressed: onRemove, child: const Text('Remove')),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Photo of the card (optional)',
+          style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navyText),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (onTake != null) ...[
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('photo-take'),
+                  onPressed: onTake,
+                  icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                  label: const Text('Take photo'),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const Key('photo-choose'),
+                onPressed: onChoose,
+                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                label: const Text('Choose photo'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

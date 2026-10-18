@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,6 +39,7 @@ LostCardReportModel _report(
   String reg = 'FA23-BSE-001',
   String status = 'OPEN',
   DateTime? resolvedAt,
+  bool hasPhoto = false,
 }) =>
     LostCardReportModel(
       id: id,
@@ -47,7 +51,11 @@ LostCardReportModel _report(
       createdAt: DateTime(2026, 10, 17, 9),
       status: status,
       resolvedAt: resolvedAt,
+      hasPhoto: hasPhoto,
     );
+
+final Uint8List _png = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
 
 void main() {
   group('matchCard', () {
@@ -91,10 +99,60 @@ void main() {
       expect(find.textContaining('if known'), findsNothing);
       expect(find.textContaining('if visible'), findsNothing);
 
+      await tester.ensureVisible(find.text('Submit Report')); // the page is longer now that it has the photo picker
       await tester.tap(find.text('Submit Report'));
       await tester.pump();
       expect(find.textContaining('Required - the name'), findsOneWidget);
       expect(find.textContaining('Required - the number'), findsOneWidget);
+    });
+  });
+
+  group('card photo', () {
+    testWidgets('the finder form offers a photo (optional) and the details stay required', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: FoundCardReportScreen())));
+      await tester.pump();
+
+      expect(find.text('Photo of the card (optional)'), findsOneWidget);
+      expect(find.byKey(const Key('photo-choose')), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Submit Report'));
+      await tester.tap(find.text('Submit Report'));
+      await tester.pump();
+      expect(find.textContaining('Required - the name'), findsOneWidget); // a photo does not replace them
+    });
+
+    testWidgets('Admin sees "View card photo" only when the finder attached one, and can open it', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          adminRepositoryProvider.overrideWithValue(_FakeRepo()),
+          lostCardReportsProvider.overrideWith((ref) => Stream.value([
+                _report('with', hasPhoto: true),
+                _report('without'),
+                _report('closed', status: 'RESOLVED', resolvedAt: DateTime(2026, 10, 17, 10), hasPhoto: true),
+              ])),
+          registeredNameProvider.overrideWith((ref, reg) async => 'Ayesha Khan'),
+          lostCardPhotoProvider.overrideWith((ref, id) async => _png),
+        ],
+        child: const MaterialApp(home: Scaffold(body: AdminLostCardsScreen())),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('photo-with')), findsOneWidget);
+      expect(find.byKey(const ValueKey('photo-without')), findsNothing);
+      expect(find.byKey(const ValueKey('photo-closed')), findsNothing); // the photo is gone once resolved
+
+      await tester.tap(find.byKey(const ValueKey('photo-with')));
+      await tester.pumpAndSettle();
+      expect(find.text('Card photo'), findsOneWidget);
+      expect(find.byKey(const Key('card-photo')), findsOneWidget);
     });
   });
 

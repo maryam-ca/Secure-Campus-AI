@@ -18,7 +18,8 @@ Checked on 2026-10-18 against the project proposal (SecureCampus_Final.pdf). "Ph
 | 4.4 | Activity logs for attendance, library and bus | **Partial:** library lock history, report and loan records, bus trip status; **no single activity log** | gap, see section 3 |
 | 4.4 / 4.7 | Alerts for suspicious activity, security monitoring of attendance and gate | Phase 2 | `phase-2` branch |
 | 4.5 | Found card: any user submits; matched with records; student notified | Done as a form (name and registration number), Admin verifies, Admin notifies | `found_card_report_screen.dart`, `admin_lost_cards_screen.dart` |
-| 4.5 | Capture an image of the card and **extract** name and registration number | **Not done** (the finder types them) | gap |
+| 4.5 | Capture an image of the card | Done (optional photo: camera or gallery; kept in `lostCardPhotos`, Admin only, deleted when the report is resolved) | `found_card_report_screen.dart`, `firestore.rules` |
+| 4.5 | ...and **extract** the name and registration number from it | **Not done** (the finder types them; the Admin can check them against the photo) | gap |
 | 4.6 | Student dashboard: bus updates, library | Done | `features/student/` |
 | 4.6 | Student dashboard: attendance, campus entry status | Phase 2 | `phase-2` branch |
 | Methodology 3 | Student registration and profile, course enrollment, registration numbers | Done (add, CSV import, edit, courses per student) | `features/admin/` |
@@ -52,7 +53,7 @@ Removed in this audit because they were dead or Phase 2 leftovers:
 ## 3. Gaps against the proposal (not implemented)
 
 1. **Central activity log** (4.4, WBS 6.5): there is no single log of system activities and security events.
-2. **Card image capture and text extraction** (4.5, WBS 4.1 and 4.4): the finder types the name and registration number; nothing reads a photo.
+2. **Reading the card photo automatically** (4.5, WBS 4.4): the photo can now be attached, but the finder still types the name and registration number; nothing reads the photo.
 3. **Security alerts for book reports** (4.2): by decision Security does not see them.
 4. **Teacher role** (Summary, Admin and Teacher dashboards, login): not built. The Word proposal marks it for deletion.
 5. **Campus entry status and attendance** (4.6): Phase 2.
