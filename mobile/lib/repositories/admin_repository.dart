@@ -74,10 +74,11 @@ class AdminRepository {
   }
 
   Future<void> upsertCourse(AdminCourseModel course) {
-    return _db.collection('courses').doc(course.id).set({
-      'name': course.name,
-      'schedule': course.schedule.map((s) => s.toMap()).toList(),
-    }, SetOptions(merge: true));
+    return _db.collection('courses').doc(course.id).set({'name': course.name}, SetOptions(merge: true));
+  }
+
+  Future<void> deleteCourse(String courseId) {
+    return _db.collection('courses').doc(courseId).delete();
   }
 
   // ---------------------------------------------------------------

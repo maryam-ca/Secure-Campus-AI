@@ -1,37 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ScheduleSlot {
-  final String dayOfWeek; // "Monday".."Sunday"
-  final String startTime; // "HH:MM" 24h
-  final String endTime;
-
-  const ScheduleSlot({required this.dayOfWeek, required this.startTime, required this.endTime});
-
-  Map<String, dynamic> toMap() => {'dayOfWeek': dayOfWeek, 'startTime': startTime, 'endTime': endTime};
-
-  factory ScheduleSlot.fromMap(Map<String, dynamic> map) => ScheduleSlot(
-        dayOfWeek: map['dayOfWeek'] as String? ?? 'Monday',
-        startTime: map['startTime'] as String? ?? '09:00',
-        endTime: map['endTime'] as String? ?? '10:00',
-      );
-}
-
 class AdminCourseModel {
   final String id;
   final String name;
-  final List<ScheduleSlot> schedule;
 
-  const AdminCourseModel({required this.id, required this.name, required this.schedule});
+  const AdminCourseModel({required this.id, required this.name});
 
   factory AdminCourseModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
-    return AdminCourseModel(
-      id: doc.id,
-      name: data['name'] as String? ?? doc.id,
-      schedule: (data['schedule'] as List? ?? const [])
-          .map((s) => ScheduleSlot.fromMap(Map<String, dynamic>.from(s as Map)))
-          .toList(),
-    );
+    return AdminCourseModel(id: doc.id, name: data['name'] as String? ?? doc.id);
   }
 }
 

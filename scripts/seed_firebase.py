@@ -93,7 +93,7 @@ def main() -> None:
     print("\n== Courses ==")
     for c in COURSES:
         fs.collection("courses").document(c["id"]).set({
-            "id": c["id"], "name": c["name"], "schedule": [],
+            "id": c["id"], "name": c["name"],
         }, merge=True)
         print(f"  {c['id']} - {c['name']}")
 
