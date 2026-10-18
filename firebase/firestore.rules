@@ -113,6 +113,8 @@ service cloud.firestore {
     // ---------------------------------------------------------------
     match /lostCardReports/{reportId} {
       allow create: if isSignedIn()
+                    && request.resource.data.finderUid == request.auth.uid
+                    && request.resource.data.hasPhoto is bool
                     && request.resource.data.status == 'OPEN'
                     && request.resource.data.notified == false
                     && request.resource.data.studentName is string
@@ -121,6 +123,24 @@ service cloud.firestore {
                     && request.resource.data.registrationNumber.size() > 2;
       allow read: if isAdmin() || isSecurity();
       allow update, delete: if isAdmin();
+    }
+
+    // lostCardPhotos - the optional photo of a found card, kept apart from the
+    // report so Security (who may read reports) can never download it. Only the
+    // finder can add it, once, in the same write as their own report that says
+    // hasPhoto, and it must be small (a base64 string, stored in Firestore so no
+    // paid Storage plan is needed). Only Admin reads or deletes it; it is
+    // deleted when the report is resolved or deleted.
+    match /lostCardPhotos/{reportId} {
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly(['data', 'createdAt'])
+                    && request.resource.data.data is string
+                    && request.resource.data.data.size() > 0
+                    && request.resource.data.data.size() <= 800000
+                    && getAfter(/databases/$(database)/documents/lostCardReports/$(reportId)).data.finderUid == request.auth.uid
+                    && getAfter(/databases/$(database)/documents/lostCardReports/$(reportId)).data.hasPhoto == true;
+      allow read, delete: if isAdmin();
+      allow update: if false;
     }
 
     // ---------------------------------------------------------------

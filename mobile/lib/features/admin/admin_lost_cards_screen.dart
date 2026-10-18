@@ -83,6 +83,18 @@ class _ReportCard extends ConsumerWidget {
                     style: TextStyle(color: AppColors.warning)),
                 data: (m) => _MatchBadge(result: m.result, registeredName: m.name),
               ),
+              if (r.hasPhoto && !r.isResolved) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    key: ValueKey('photo-${r.id}'),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: const Text('View card photo'),
+                    onPressed: () => showDialog<void>(context: context, builder: (_) => _PhotoDialog(reportId: r.id)),
+                  ),
+                ),
+              ],
               // A report whose name and registration number match no student can
               // never be acted on, so Admin may delete it (Admin only).
               if (match.valueOrNull != null && match.valueOrNull!.result != CardMatch.verified) ...[
@@ -154,6 +166,34 @@ class _ReportCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The photo the finder attached, loaded only when the Admin asks for it.
+class _PhotoDialog extends ConsumerWidget {
+  final String reportId;
+  const _PhotoDialog({required this.reportId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photo = ref.watch(lostCardPhotoProvider(reportId));
+    return AlertDialog(
+      title: const Text('Card photo'),
+      content: SizedBox(
+        width: 420,
+        child: photo.when(
+          loading: () => const SizedBox(height: 120, child: Center(child: CircularProgressIndicator())),
+          error: (_, __) => const Text('Could not load the photo.'),
+          data: (bytes) => bytes == null
+              ? const Text('No photo is stored for this report.')
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.memory(bytes, key: const Key('card-photo'), fit: BoxFit.contain),
+                ),
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
     );
   }
 }

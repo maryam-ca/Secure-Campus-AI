@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
 import '../core/utils/lost_card_match.dart';
@@ -246,15 +249,31 @@ class AdminRepository {
   /// Closes a report. Admin only (enforced by firestore.rules). Security then
   /// sees it marked Resolved for a day, after which it drops off their list.
   Future<void> resolveLostCardReport(String reportId) {
-    return _db.collection('lostCardReports').doc(reportId).update({
+    final batch = _db.batch();
+    batch.update(_db.collection('lostCardReports').doc(reportId), {
       'status': 'RESOLVED',
       'resolvedAt': FieldValue.serverTimestamp(),
     });
+    // the card photo is personal data: it is not kept once the report is closed
+    batch.delete(_db.collection('lostCardPhotos').doc(reportId));
+    return batch.commit();
+  }
+
+  /// The photo the finder attached, or null if there is none (or it was
+  /// already deleted). Admin only (firestore.rules).
+  Future<Uint8List?> fetchLostCardPhoto(String reportId) async {
+    final doc = await _db.collection('lostCardPhotos').doc(reportId).get();
+    final data = doc.data()?['data'] as String?;
+    if (data == null || data.isEmpty) return null;
+    return base64Decode(data);
   }
 
   /// Deletes a report outright. Admin only (enforced by firestore.rules); the
   /// screen offers it only for reports that do not match a real student.
   Future<void> deleteLostCardReport(String reportId) {
-    return _db.collection('lostCardReports').doc(reportId).delete();
+    final batch = _db.batch();
+    batch.delete(_db.collection('lostCardReports').doc(reportId));
+    batch.delete(_db.collection('lostCardPhotos').doc(reportId));
+    return batch.commit();
   }
 }

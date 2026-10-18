@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/admin_models.dart';
@@ -70,4 +72,9 @@ final registeredNameProvider = FutureProvider.autoDispose.family<String?, String
 final securityLostCardsProvider = Provider.autoDispose<AsyncValue<List<LostCardReportModel>>>((ref) {
   final now = DateTime.now();
   return ref.watch(lostCardReportsProvider).whenData((all) => all.where((r) => r.visibleToSecurity(now)).toList());
+});
+
+/// The photo a finder attached to a found-card report (Admin only).
+final lostCardPhotoProvider = FutureProvider.autoDispose.family<Uint8List?, String>((ref, reportId) {
+  return ref.watch(adminRepositoryProvider).fetchLostCardPhoto(reportId);
 });
