@@ -69,13 +69,13 @@ class AdminNav {
     PortalGroup(
       id: 'group.academics',
       label: 'Academics',
-      description: 'Courses and enrolment',
+      description: 'Course names',
       icon: Icons.menu_book_outlined,
       items: [
         PortalItem(
           id: AdminSection.courses,
           label: 'Courses',
-          description: 'Courses and the students enrolled in them',
+          description: 'Add, rename or delete course names',
           icon: Icons.menu_book_outlined,
           screen: AdminCoursesScreen(),
         ),

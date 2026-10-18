@@ -308,3 +308,17 @@ test('only the Admin reads or deletes a card photo; nobody can change one', asyn
   await assertFails(deleteDoc(doc(as('sec1'), 'lostCardPhotos/r9')));
   await assertSucceeds(deleteDoc(doc(as('admin1'), 'lostCardPhotos/r9')));
 });
+
+// ---------------------------------------------------------------- courses
+test('only the Admin adds, renames or deletes a course, and it needs a real name; everyone signed in can read', async () => {
+  await assertSucceeds(setDoc(doc(as('admin1'), 'courses/SE'), { name: 'Software Engineering' }));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'courses/SE'), { name: 'Software Engineering II' }));
+  await assertSucceeds(getDoc(doc(as('stu1'), 'courses/SE')));
+  await assertFails(setDoc(doc(as('admin1'), 'courses/XX'), { name: '' }));
+  await assertFails(setDoc(doc(as('admin1'), 'courses/XX'), { name: 'A' }));
+  await assertFails(setDoc(doc(as('admin1'), 'courses/XX'), { title: 'no name field' }));
+  await assertFails(setDoc(doc(as('stu1'), 'courses/YY'), { name: 'Not allowed' }));
+  await assertFails(setDoc(doc(as('lib1'), 'courses/YY'), { name: 'Not allowed' }));
+  await assertFails(deleteDoc(doc(as('stu1'), 'courses/SE')));
+  await assertSucceeds(deleteDoc(doc(as('admin1'), 'courses/SE')));
+});

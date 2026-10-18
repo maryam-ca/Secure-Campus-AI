@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Academics > Courses: names only, with Add, Edit and Delete
+- **Type:** refactor
+- **Areas:** mobile, firebase, scripts
+- **What changed:** A course is now just an ID and a name. The page lists the courses with an Edit and a Delete icon on each row; Add Course opens a small dialog (ID and name). Delete asks for confirmation and is refused while students are registered in the course. The weekly schedule (time slots) was removed; it belongs to Phase 2 with attendance (kept on the phase-2 branch). Firestore rule: a course needs a name of 2 to 120 characters; only Admin writes or deletes.
+- **Files:** mobile/lib/features/admin/admin_courses_screen.dart, models/admin_models.dart (`ScheduleSlot` removed), repositories/admin_repository.dart (`deleteCourse`), features/admin/admin_nav.dart, firebase/firestore.rules, firebase/rules-tests/firestore.rules.test.mjs, scripts/seed_firebase.py, mobile/test/admin_courses_test.dart
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (182 passed), Firestore rules tests in the emulator (25 passed).
+- **Notes:** Old course documents keep an unused `schedule` field; nothing reads it. The updated rules must be published to the live project.
+
 ### 2026-10-18 — Found-card report: optional photo of the card (free tier)
 - **Type:** feature
 - **Areas:** mobile, firebase
