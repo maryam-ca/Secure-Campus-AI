@@ -30,6 +30,26 @@ class BackendApiService {
     return token;
   }
 
+  /// POSTs JSON with the Admin's token. A failure to connect (service not
+  /// running, wrong address, blocked, or too slow) becomes a plain sentence that
+  /// names the address, instead of a raw network error.
+  Future<http.Response> _post(String path, Map<String, dynamic> body) async {
+    final token = await _idToken();
+    try {
+      return await http
+          .post(
+            Uri.parse('$baseUrl$path'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw BackendApiException(
+        'Cannot reach the account service at $baseUrl. It must be running and reachable from this device.',
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> createAccount({
     required String email,
     required String name,
@@ -37,20 +57,13 @@ class BackendApiService {
     Map<String, dynamic>? studentFields,
     String? password,
   }) async {
-    final token = await _idToken();
-    final resp = await http
-        .post(
-          Uri.parse('$baseUrl/admin/accounts'),
-          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-          body: jsonEncode({
-            'email': email,
-            'name': name,
-            'role': role,
-            if (studentFields != null) 'studentFields': studentFields,
-            if (password != null && password.isNotEmpty) 'password': password,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    final resp = await _post('/admin/accounts', {
+          'email': email,
+          'name': name,
+          'role': role,
+          if (studentFields != null) 'studentFields': studentFields,
+          if (password != null && password.isNotEmpty) 'password': password,
+        });
 
     if (resp.statusCode != 200) {
       throw BackendApiException(_extractDetail(resp) ?? 'Account creation failed (${resp.statusCode}).');
@@ -59,14 +72,7 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> deactivateAccount(String uid) async {
-    final token = await _idToken();
-    final resp = await http
-        .post(
-          Uri.parse('$baseUrl/admin/accounts/deactivate'),
-          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-          body: jsonEncode({'uid': uid}),
-        )
-        .timeout(const Duration(seconds: 15));
+    final resp = await _post('/admin/accounts/deactivate', {'uid': uid});
 
     if (resp.statusCode != 200) {
       throw BackendApiException(_extractDetail(resp) ?? 'Deactivation failed (${resp.statusCode}).');
@@ -84,19 +90,12 @@ class BackendApiService {
     String? name,
     String? password,
   }) async {
-    final token = await _idToken();
-    final resp = await http
-        .post(
-          Uri.parse('$baseUrl/admin/accounts/update'),
-          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-          body: jsonEncode({
-            'uid': uid,
-            'role': role,
-            if (name != null && name.isNotEmpty) 'name': name,
-            if (password != null && password.isNotEmpty) 'password': password,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    final resp = await _post('/admin/accounts/update', {
+          'uid': uid,
+          'role': role,
+          if (name != null && name.isNotEmpty) 'name': name,
+          if (password != null && password.isNotEmpty) 'password': password,
+        });
 
     if (resp.statusCode != 200) {
       throw BackendApiException(_extractDetail(resp) ?? 'Update failed (${resp.statusCode}).');
