@@ -5,7 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/bus_route.dart';
 import '../../core/utils/save_error.dart';
 import '../../core/widgets/confirm_dialog.dart';
-import '../../core/widgets/portal_scaffold.dart';
+import '../../core/widgets/section_card.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
 

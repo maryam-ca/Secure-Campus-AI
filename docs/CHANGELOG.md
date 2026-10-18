@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-18 — Requirements audit and cleanup
+- **Type:** refactor
+- **Areas:** mobile, docs
+- **What changed:** Audited the code against the proposal (docs/REQUIREMENTS_AUDIT.md). Removed dead code and Phase 2 leftovers: the unused `PortalScaffold` class (`SectionCard` moved to `core/widgets/section_card.dart`), the unused packages `image_picker` and `firebase_storage`, the deprecated `functions/` Cloud Function, and four empty feature folders. The student "I did not borrow this" dialog now says the report goes to the librarian and the admin (Security no longer shows book reports). README no longer describes the Cloud Function.
+- **Files:** mobile/lib/core/widgets/section_card.dart, mobile/pubspec.yaml, mobile/pubspec.lock, mobile/lib/features/student/widgets/library_section.dart, README.md, docs/REQUIREMENTS_AUDIT.md, functions/ (removed)
+- **Verified by:** flutter analyze (no errors or warnings), flutter test (174 passed). pubspec.lock only lost packages; no version was upgraded.
+
 ### 2026-10-18 — Admin Library: removed the duplicate Catalog / Reports tabs
 - **Type:** fix
 - **Areas:** mobile
