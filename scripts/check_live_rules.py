@@ -82,6 +82,7 @@ def main() -> int:
     probe("libraryIssues (existing rule)", "libraryIssues")
     reports = probe("issueReports (student reports rule)", "issueReports")
     history = probe("books/BOOK-001/lockHistory (lock history rule)", "books/BOOK-001/lockHistory")
+    config = probe("config (campus location rule)", "config")
 
     if reports and history:
         print("\nThe new rules are PUBLISHED. Locking books and student reports should work.")
