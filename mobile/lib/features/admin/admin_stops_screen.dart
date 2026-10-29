@@ -11,6 +11,8 @@ import '../../core/widgets/section_card.dart';
 import '../../models/admin_models.dart';
 import '../../models/transport_models.dart';
 import '../../providers/admin_providers.dart';
+import '../../providers/road_route_provider.dart';
+import '../../services/road_route_service.dart';
 import 'campus_dialog.dart';
 import 'map_picker_screen.dart';
 
@@ -195,6 +197,12 @@ class _RouteMapCard extends ConsumerWidget {
     final points = routePoints(stops, campus);
     final sorted = [...stops]..sort((a, b) => a.order.compareTo(b.order));
 
+    // The line follows real roads (free OpenStreetMap routing). While it loads,
+    // or if it cannot be found, straight lines are drawn and the note says so.
+    final road = points.length > 1 ? ref.watch(roadRouteProvider(routeKey(points))) : null;
+    final roadRoute = road?.valueOrNull;
+    final linePoints = roadRoute?.points ?? points;
+
     return SectionCard(
       title: 'Route map',
       icon: Icons.map_outlined,
@@ -230,7 +238,7 @@ class _RouteMapCard extends ConsumerWidget {
                           userAgentPackageName: 'com.example.securecampus',
                         ),
                         if (points.length > 1)
-                          PolylineLayer(polylines: [Polyline(points: points, strokeWidth: 4, color: AppColors.primaryBlue)]),
+                          PolylineLayer(polylines: [Polyline(points: linePoints, strokeWidth: 4, color: AppColors.primaryBlue)]),
                         MarkerLayer(
                           markers: [
                             for (var i = 0; i < sorted.length; i++)
@@ -270,6 +278,18 @@ class _RouteMapCard extends ConsumerWidget {
                       : 'Green = where the morning bus starts (stop 1). The line runs stop by stop to the campus.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
+                if (points.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _roadNote(road, roadRoute),
+                      key: const Key('road-route-note'),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: road != null && !road.isLoading && roadRoute == null ? AppColors.warning : null,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
               ],
             ),
     );
@@ -442,4 +462,12 @@ class _CampusStopTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _roadNote(AsyncValue<RoadRoute?>? road, RoadRoute? route) {
+  if (route != null) {
+    return 'Road route: ${route.distanceKm.toStringAsFixed(1)} km, about ${route.durationMinutes} min by road.';
+  }
+  if (road == null || road.isLoading) return 'Finding the road route...';
+  return 'Showing straight lines: the road route could not be loaded (no internet or the routing service is busy).';
 }

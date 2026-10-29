@@ -7,7 +7,21 @@ import 'package:latlong2/latlong.dart';
 import 'package:securecampus/models/admin_models.dart';
 import 'package:securecampus/models/transport_models.dart';
 import 'package:securecampus/providers/admin_providers.dart';
+import 'package:securecampus/providers/road_route_provider.dart';
+import 'package:securecampus/services/road_route_service.dart';
 import 'package:securecampus/repositories/admin_repository.dart';
+
+/// Stands in for the OpenStreetMap routing service (no network in tests).
+class _FakeRoadService extends Fake implements RoadRouteService {
+  RoadRoute? result;
+  int calls = 0;
+
+  @override
+  Future<RoadRoute?> fetch(List<LatLng> places) async {
+    calls++;
+    return result;
+  }
+}
 
 class _FakeRepo implements AdminRepository {
   final List<Map<String, int>> orderCalls = [];
@@ -48,7 +62,7 @@ class _FakeRepo implements AdminRepository {
 BusStopModel _stop(String id, int order) => BusStopModel(id: id, name: 'Stop $id', lat: 33, lng: 73, order: order);
 
 Future<_FakeRepo> _pump(WidgetTester tester, List<BusStopModel> stops,
-    {List<AdminBusAssignmentModel> riders = const [], CampusLocation? campus}) async {
+    {List<AdminBusAssignmentModel> riders = const [], CampusLocation? campus, _FakeRoadService? road}) async {
   tester.view.physicalSize = const Size(1080, 4000);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -60,6 +74,7 @@ Future<_FakeRepo> _pump(WidgetTester tester, List<BusStopModel> stops,
       busStopsProvider.overrideWith((ref) => Stream.value(stops)),
       busAssignmentsProvider.overrideWith((ref) => Stream.value(riders)),
       campusLocationProvider.overrideWith((ref) => Stream.value(campus)),
+      roadRouteServiceProvider.overrideWithValue(road ?? _FakeRoadService()),
     ],
     child: const MaterialApp(home: Scaffold(body: AdminStopsScreen())),
   ));
@@ -287,6 +302,38 @@ void main() {
     expect(find.textContaining('rules may not be published'), findsOneWidget);
     expect(find.text('Campus location'), findsOneWidget); // dialog stays open
   });
+  });
+
+  group('the route map follows the roads', () {
+    final road = RoadRoute(
+      points: const [LatLng(33.81, 72.35), LatLng(33.80, 72.352), LatLng(33.79, 72.355), LatLng(33.78, 72.36)],
+      distanceMeters: 12345,
+      durationSeconds: 1500,
+    );
+
+    testWidgets('with a road route it says how long the road route is', (tester) async {
+      final svc = _FakeRoadService()..result = road;
+      await _pump(tester, [_stop('A', 1), _stop('B', 2)], road: svc);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const Key('road-route-note')), findsOneWidget);
+      expect(find.text('Road route: 12.3 km, about 25 min by road.'), findsOneWidget);
+      expect(svc.calls, 1);
+    });
+
+    testWidgets('when the road route cannot be found it says straight lines are shown', (tester) async {
+      await _pump(tester, [_stop('A', 1), _stop('B', 2)]);
+      await tester.pump();
+      await tester.pump();
+      expect(find.textContaining('Showing straight lines'), findsOneWidget);
+    });
+
+    testWidgets('with a single place there is nothing to route and no note', (tester) async {
+      final svc = _FakeRoadService();
+      await _pump(tester, [_stop('A', 1)], road: svc);
+      expect(find.byKey(const Key('road-route-note')), findsNothing);
+      expect(svc.calls, 0);
+    });
   });
 
   group('editing a stop', () {

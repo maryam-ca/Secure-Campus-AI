@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — Route map follows the roads (not straight lines)
+- **Problem:** the Route map on Admin > Transport > Stops joined the stops with straight lines that cut across the town.
+- **Fix:** the line now follows real roads, using the free OpenStreetMap routing service (OSRM, no key, no billing; the same service `bus_eta` uses for arrival times). The card also says "Road route: 10.5 km, about 12 min by road." While it loads, or if it cannot be reached, straight lines are drawn and the note says "Showing straight lines: the road route could not be loaded...": it never pretends a straight line is a road.
+- **Checked live:** the real service returned a road route for the three real stops (Bus Station, Bata Stop, campus): 10.5 km, 12 min, 182 road points, and it allows requests from the website (`Access-Control-Allow-Origin: *`).
+- **Files:** mobile/lib/services/road_route_service.dart, mobile/lib/providers/road_route_provider.dart, mobile/lib/features/admin/admin_stops_screen.dart, mobile/test/{road_route_test,admin_stops_test}.dart
+- **Verified by:** `flutter test` all passing (new: OSRM answer parsing incl. longitude-first order and bad answers, request URL, server error / bad JSON / offline give null, no request for fewer than two places, map note for road route / straight-line fallback / single place); `flutter analyze` 0 errors.
+- **Not verified:** seeing the road line drawn on the real map in the app (tests use a fake routing service). The public OSRM demo server is shared and may be slow or busy at times; the fallback covers that.
+
 ### 2026-10-29 — Web site updates automatically from each push (GitHub Action) [setup needed]
 - **Problem:** Vercel cannot build Flutter and the repo turns its Git builds off, so a push never updated the live site; manual uploads kept shipping an old `main.dart.js` (verified by downloading the live file: same checksum across three redeploys, still containing the removed "Campus Location" card).
 - **Added:** `.github/workflows/deploy-web.yml`: on every push to `main` (or Run workflow) it builds the web app from that commit, uploads it to the live Vercel project with the CLI, and then compares the live `main.dart.js` checksum with the one it just built; the job fails if they differ. `docs/DEPLOY_WEB.md` has the one-time setup.
