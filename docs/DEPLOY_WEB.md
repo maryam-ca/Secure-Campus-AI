@@ -11,6 +11,8 @@ flutter build web --release
 vercel deploy --prod --yes --name securecampus
 ```
 
+**One-click version:** run `.\deploy_web.bat` from the repo root. It checks that the Vercel CLI is signed in as `maryamfatima454` (if not: `vercel logout`, then `vercel login`), builds the web app from the current code, and deploys it. To confirm what is live, download `https://securecampus-seven.vercel.app/main.dart.js` and search it for a phrase from the newest feature; after the upload press Ctrl+F5 in the browser (Flutter keeps the old version in a service worker).
+
 Notes
 - The login page has no pre-filled accounts or "Demo accounts" button in any build: users sign in with their own email and password.
 - Routing uses `#/` (e.g. `/#/login`), so no rewrites are needed.
