@@ -28,6 +28,12 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — Admin: edit a bus stop; test for the alert at trip start
+- **Edit a stop (was missing):** Admin > Transport > Stops, each stop has an **Edit** button (pencil). Change the name and/or choose a new location on the map; the stop keeps its ID and its place in the route. Students assigned to the stop have a copy of its name, so those copies are updated in the same save (otherwise they would keep seeing the old name).
+- **Alert when a trip starts close to a stop:** already how `bus_eta` works, now proven by a named test: on the very first reading of a new trip, every stop that is 10 minutes or less away sends its "head to your stop" alert immediately (exactly 10 counts); stops further away wait. Nothing changed in `bus_eta` itself.
+- **Verified by:** `flutter test` **199/199** (3 new edit tests), `bus_eta` pytest **39/39** (1 new), `flutter analyze` 0 errors.
+- **Not verified:** on a phone/real Firestore (the rename-of-student-copies batch runs only against a fake in tests).
+
 ### 2026-10-29 — Campus location: map first (typing coordinates is optional)
 - **Problem:** the Campus Location dialog still led with latitude/longitude boxes, so it looked manual even though a map button existed.
 - **Fix:** the dialog now has a full-width **Choose location on map** button and shows the chosen place as text ("Location: 33.78099, 72.35105"). Typing numbers is behind a small **Type coordinates instead** link. Saving with no location says "Choose the campus location on the map."

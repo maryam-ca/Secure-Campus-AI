@@ -135,6 +135,12 @@ class AdminStopsScreen extends ConsumerWidget {
                                     : () => ref.read(adminRepositoryProvider).applyStopOrder(reorderedStops(stops, i, 1)),
                               ),
                               IconButton(
+                                key: Key('stop-edit-$i'),
+                                tooltip: 'Edit this stop (name or location)',
+                                icon: const Icon(Icons.edit_outlined, size: 20),
+                                onPressed: () => showDialog(context: context, builder: (_) => _AddStopDialog(stop: stops[i])),
+                              ),
+                              IconButton(
                                 key: Key('stop-delete-$i'),
                                 tooltip: 'Delete this stop',
                                 icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
@@ -256,16 +262,19 @@ class _RouteMapCard extends ConsumerWidget {
   }
 }
 
+/// Adds a stop, or (when [stop] is given) edits its name and location while
+/// keeping its ID and place in the route.
 class _AddStopDialog extends ConsumerStatefulWidget {
-  const _AddStopDialog();
+  final BusStopModel? stop;
+  const _AddStopDialog({this.stop});
 
   @override
   ConsumerState<_AddStopDialog> createState() => _AddStopDialogState();
 }
 
 class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
-  final _name = TextEditingController();
-  LatLng? _location;
+  late final _name = TextEditingController(text: widget.stop?.name ?? '');
+  late LatLng? _location = widget.stop == null ? null : LatLng(widget.stop!.lat, widget.stop!.lng);
   bool _submitting = false;
   String? _error;
 
@@ -282,7 +291,8 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
               ? LatLng(stops.last.lat, stops.last.lng)
               : (campus != null ? LatLng(campus.lat, campus.lng) : null),
           others: [
-            for (final s in stops) LatLng(s.lat, s.lng),
+            for (final s in stops)
+              if (s.id != widget.stop?.id) LatLng(s.lat, s.lng),
             if (campus != null) LatLng(campus.lat, campus.lng),
           ],
         ),
@@ -307,13 +317,22 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
     });
     try {
       final stops = ref.read(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
-      await ref.read(adminRepositoryProvider).upsertBusStop(
-            nextStopId(stops.map((s) => s.id)),
-            _name.text.trim(),
-            _location!.latitude,
-            _location!.longitude,
-            nextStopOrder(stops),
-          );
+      if (widget.stop != null) {
+        await ref.read(adminRepositoryProvider).updateBusStop(
+              widget.stop!.id,
+              _name.text.trim(),
+              _location!.latitude,
+              _location!.longitude,
+            );
+      } else {
+        await ref.read(adminRepositoryProvider).upsertBusStop(
+              nextStopId(stops.map((s) => s.id)),
+              _name.text.trim(),
+              _location!.latitude,
+              _location!.longitude,
+              nextStopOrder(stops),
+            );
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) setState(() => _error = saveFailureMessage(e));
@@ -326,7 +345,7 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
   Widget build(BuildContext context) {
     final stops = ref.watch(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
     return AlertDialog(
-      title: const Text('Add Bus Stop'),
+      title: Text(widget.stop == null ? 'Add Bus Stop' : 'Edit Bus Stop'),
       content: SizedBox(
         width: 380,
         child: Column(
@@ -355,9 +374,11 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
             ),
             const SizedBox(height: 6),
             Text(
-              stops.isEmpty
-                  ? 'This will be stop 1, where the morning bus starts.'
-                  : 'It is added at the end of the route (stop ${nextStopOrder(stops)}). Use the arrows to move it.',
+              widget.stop != null
+                  ? 'The stop keeps its place in the route. Students assigned to it see the new name.'
+                  : stops.isEmpty
+                      ? 'This will be stop 1, where the morning bus starts.'
+                      : 'It is added at the end of the route (stop ${nextStopOrder(stops)}). Use the arrows to move it.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (_error != null) ...[
@@ -374,7 +395,7 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
           onPressed: _submitting ? null : _submit,
           child: _submitting
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Add'),
+              : Text(widget.stop == null ? 'Add' : 'Save'),
         ),
       ],
     );

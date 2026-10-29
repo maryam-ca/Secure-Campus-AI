@@ -110,6 +110,20 @@ class AdminRepository {
     return _db.collection('busStops').doc(id).set({'name': name, 'lat': lat, 'lng': lng, 'order': order});
   }
 
+  /// Renames and/or moves an existing stop, keeping its ID and its place in the
+  /// route. Students' assignments keep a copy of the stop name, so those copies
+  /// are updated in the same batch; otherwise students would keep seeing the old
+  /// name. Admin only (firestore.rules).
+  Future<void> updateBusStop(String stopId, String name, double lat, double lng) async {
+    final riders = await _db.collection('busAssignments').where('stopId', isEqualTo: stopId).get();
+    final batch = _db.batch();
+    batch.update(_db.collection('busStops').doc(stopId), {'name': name, 'lat': lat, 'lng': lng});
+    for (final r in riders.docs) {
+      batch.update(r.reference, {'stopName': name});
+    }
+    return batch.commit();
+  }
+
   Stream<List<AdminBusAssignmentModel>> watchBusAssignments() {
     return _db.collection('busAssignments').snapshots().map(
         (s) => s.docs.map(AdminBusAssignmentModel.fromFirestore).toList());

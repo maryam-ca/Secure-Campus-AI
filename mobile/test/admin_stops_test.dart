@@ -14,6 +14,11 @@ class _FakeRepo implements AdminRepository {
   final List<String> deleted = [];
   final List<Map<String, int>> renumberCalls = [];
   final List<({String id, String name, double lat, double lng, int order})> added = [];
+  final List<({String id, String name, double lat, double lng})> updated = [];
+
+  @override
+  Future<void> updateBusStop(String stopId, String name, double lat, double lng) async =>
+      updated.add((id: stopId, name: name, lat: lat, lng: lng));
 
   @override
   Future<void> upsertBusStop(String id, String name, double lat, double lng, int order) async =>
@@ -164,6 +169,45 @@ void main() {
       expect(find.byType(MapPickerScreen), findsOneWidget);
       // Nothing chosen yet: the confirm button is disabled.
       expect(tester.widget<ElevatedButton>(find.byKey(const Key('picker-use'))).onPressed, isNull);
+    });
+  });
+
+  group('editing a stop', () {
+    testWidgets('the edit dialog opens with the current name and location', (tester) async {
+      await _pump(tester, [_stop('A', 1), _stop('B', 2)]);
+      await tester.tap(find.byKey(const Key('stop-edit-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Bus Stop'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byKey(const Key('stop-name-field'))).controller!.text, 'Stop B');
+      expect(find.text('Location: 33.00000, 73.00000'), findsOneWidget);
+      expect(find.text('Change location on map'), findsOneWidget);
+      expect(find.textContaining('keeps its place in the route'), findsOneWidget);
+    });
+
+    testWidgets('renaming saves the same stop (same ID, same place) and adds nothing new', (tester) async {
+      final repo = await _pump(tester, [_stop('A', 1), _stop('B', 2)]);
+      await tester.tap(find.byKey(const Key('stop-edit-0')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('stop-name-field')), 'Main Chowk');
+      await tester.tap(find.byKey(const Key('stop-add')));
+      await tester.pumpAndSettle();
+
+      expect(repo.updated, [(id: 'A', name: 'Main Chowk', lat: 33.0, lng: 73.0)]);
+      expect(repo.added, isEmpty);
+      expect(find.text('Edit Bus Stop'), findsNothing);
+    });
+
+    testWidgets('an empty name is refused', (tester) async {
+      final repo = await _pump(tester, [_stop('A', 1)]);
+      await tester.tap(find.byKey(const Key('stop-edit-0')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('stop-name-field')), '   ');
+      await tester.tap(find.byKey(const Key('stop-add')));
+      await tester.pump();
+      expect(find.text('Enter a name for the stop.'), findsOneWidget);
+      expect(repo.updated, isEmpty);
     });
   });
 

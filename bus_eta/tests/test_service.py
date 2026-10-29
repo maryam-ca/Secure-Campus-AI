@@ -213,3 +213,27 @@ def test_students_at_the_same_stop_share_one_routing_lookup(monkeypatch):
     monkeypatch.setattr(service, "estimate_eta_minutes", fake_eta)
     assert service.run_once() == 3  # all three students are told
     assert len(lookups) == 1        # but the road route was asked for once
+
+
+def test_at_the_start_of_a_trip_stops_already_inside_10_minutes_are_alerted_at_once(monkeypatch):
+    """The driver starts the trip and the very first reading already has some stops
+    inside the 10-minute window: those students are alerted in that first cycle;
+    students at stops further away are not (they get theirs later)."""
+    monkeypatch.setattr(service, "_trip_was_active", False)  # this is the first cycle of a new trip
+    fc = MagicMock()
+    fc.read_driver_location.return_value = SimpleNamespace(
+        trip_active=True, trip_id="NEW-TRIP", lat=1.0, lng=2.0, updated_at=time.time() * 1000)
+    fc.fetch_active_assignments_with_stops.return_value = [
+        {"id": "a-close", "studentId": "close", "stopName": "Close", "stopLat": 10.0, "stopLng": 10.0},
+        {"id": "a-edge", "studentId": "edge", "stopName": "Edge", "stopLat": 20.0, "stopLng": 20.0},
+        {"id": "a-far", "studentId": "far", "stopName": "Far", "stopLat": 50.0, "stopLng": 50.0},
+    ]
+    monkeypatch.setattr(service, "firebase_client", fc)
+    etas = {(10.0, 10.0): 4, (20.0, 20.0): 10, (50.0, 50.0): 25}
+    monkeypatch.setattr(service, "estimate_eta_minutes", lambda **kw: (etas[kw["dest"]], "test"))
+
+    assert service.run_once() == 2
+    alerted = sorted(c.args[0] for c in fc.notify_student_bus.call_args_list)
+    assert alerted == ["close", "edge"]  # exactly 10 minutes counts as inside the window
+    fc.mark_alert_sent.assert_any_call("a-close", "NEW-TRIP", FINAL)
+    fc.mark_alert_sent.assert_any_call("a-edge", "NEW-TRIP", FINAL)
