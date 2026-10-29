@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — README brought up to date with the built system
+- **Type:** docs
+- **Areas:** docs
+- **What changed:** README now describes what Phase 1 contains (map-built route, campus as a stop, road route, driver reliability, alert at trip start), the live demo link, how to update the web version (deploy_web.bat), current test counts (211 / 7 / 39 / 10 / 25), OpenStreetMap maps (no Google Maps key), and the real limitations (not yet tried on a bus; afternoon trip not built). Removed claims that the Flutter code was never compiled.
+- **Files:** README.md
+- **Verified by:** read through; commands match run_app.bat / deploy_web.bat / docs/DEPLOY_WEB.md
+
 ### 2026-10-29 — Route map follows the roads (not straight lines)
 - **Problem:** the Route map on Admin > Transport > Stops joined the stops with straight lines that cut across the town.
 - **Fix:** the line now follows real roads, using the free OpenStreetMap routing service (OSRM, no key, no billing; the same service `bus_eta` uses for arrival times). The card also says "Road route: 10.5 km, about 12 min by road." While it loads, or if it cannot be reached, straight lines are drawn and the note says "Showing straight lines: the road route could not be loaded...": it never pretends a straight line is a road.
