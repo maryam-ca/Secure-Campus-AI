@@ -87,12 +87,49 @@ void main() {
     expect(find.textContaining('Seats'), findsNothing);
   });
 
+  testWidgets('the campus dialog is map-first: a Choose location on map button, numbers hidden until asked', (tester) async {
+    await _pump(tester);
+    await tester.tap(find.text('Set'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose location on map'), findsOneWidget);
+    expect(find.text('No location chosen yet.'), findsOneWidget);
+    expect(find.byKey(const Key('campus-lat-field')), findsNothing);
+
+    // Saving without a location tells the Admin to use the map, not "a number from -90 to 90".
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Choose the campus location on the map.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
+    expect(find.byKey(const Key('campus-lat-field')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.pump();
+    expect(find.text('Location: 33.78099, 72.35105'), findsOneWidget);
+    expect(find.text('Change location on map'), findsOneWidget);
+  });
+
+  testWidgets('the campus dialog opens the map picker', (tester) async {
+    await _pump(tester);
+    await tester.tap(find.text('Set'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('campus-pick-on-map')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('picker-use')), findsOneWidget);
+    expect(find.text('Choose the campus location'), findsOneWidget);
+  });
+
   testWidgets('the campus dialog names the field that is wrong', (tester) async {
     await _pump(tester);
     await tester.tap(find.text('Set'));
     await tester.pumpAndSettle();
 
     // coordinates fine, name empty: only the name is flagged
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
     await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
     await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
     await tester.tap(find.text('Save'));
@@ -117,6 +154,8 @@ void main() {
     await tester.tap(find.text('Set'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
     await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
     await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
     await tester.tap(find.text('Save'));

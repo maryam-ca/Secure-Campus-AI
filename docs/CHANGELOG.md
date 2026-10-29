@@ -28,6 +28,12 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — Campus location: map first (typing coordinates is optional)
+- **Problem:** the Campus Location dialog still led with latitude/longitude boxes, so it looked manual even though a map button existed.
+- **Fix:** the dialog now has a full-width **Choose location on map** button and shows the chosen place as text ("Location: 33.78099, 72.35105"). Typing numbers is behind a small **Type coordinates instead** link. Saving with no location says "Choose the campus location on the map."
+- **Verified by:** `flutter test` **196/196** (2 new dialog tests, 3 existing ones updated for the hidden boxes); `flutter analyze` 0 errors.
+- **Not verified:** tapping the map in the real app; commit is local until the GitHub 403 (wrong signed-in account) is fixed.
+
 ### 2026-10-29 — Admin: set the bus route and starting point by tapping the map
 - **Problem:** stops and the campus had to be entered as typed latitude/longitude numbers, plus a hand-made stop ID and order number. Hard to do and easy to get wrong.
 - **Now:**

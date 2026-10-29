@@ -218,6 +218,15 @@ class _CampusDialogState extends ConsumerState<_CampusDialog> {
   String? _lngError;
   String? _saveError;
 
+  /// The coordinate boxes are tucked away: the map is the normal way to choose.
+  bool _typing = false;
+
+  bool get _hasLocation {
+    final lat = double.tryParse(_lat.text.trim());
+    final lng = double.tryParse(_lng.text.trim());
+    return lat != null && lng != null && lat.abs() <= 90 && lng.abs() <= 180;
+  }
+
   /// Choose the campus by tapping the map; fills the latitude/longitude boxes.
   Future<void> _pickOnMap() async {
     final curLat = double.tryParse(_lat.text.trim());
@@ -278,35 +287,64 @@ class _CampusDialogState extends ConsumerState<_CampusDialog> {
             decoration: InputDecoration(labelText: 'Campus name', errorText: _nameError),
           ),
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
               key: const Key('campus-pick-on-map'),
               onPressed: _pickOnMap,
               icon: const Icon(Icons.map_outlined),
-              label: const Text('Choose on map'),
+              label: Text(_hasLocation ? 'Change location on map' : 'Choose location on map'),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: TextField(
-                key: const Key('campus-lat-field'),
-                controller: _lat,
-                keyboardType: decimal,
-                decoration: InputDecoration(labelText: 'Latitude', errorText: _latError),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _hasLocation
+                  ? 'Location: ${double.parse(_lat.text.trim()).toStringAsFixed(5)}, ${double.parse(_lng.text.trim()).toStringAsFixed(5)}'
+                  : 'No location chosen yet.',
+              key: const Key('campus-location-text'),
+            ),
+          ),
+          if (!_typing && (_latError != null || _lngError != null))
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text('Choose the campus location on the map.',
+                    key: Key('campus-location-error'), style: TextStyle(color: AppColors.error)),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                key: const Key('campus-lng-field'),
-                controller: _lng,
-                keyboardType: decimal,
-                decoration: InputDecoration(labelText: 'Longitude', errorText: _lngError),
-              ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const Key('campus-type-coordinates'),
+              onPressed: () => setState(() => _typing = !_typing),
+              child: Text(_typing ? 'Hide coordinates' : 'Type coordinates instead'),
             ),
-          ]),
+          ),
+          if (_typing)
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('campus-lat-field'),
+                  controller: _lat,
+                  keyboardType: decimal,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(labelText: 'Latitude', errorText: _latError),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  key: const Key('campus-lng-field'),
+                  controller: _lng,
+                  keyboardType: decimal,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(labelText: 'Longitude', errorText: _lngError),
+                ),
+              ),
+            ]),
           if (_saveError != null) ...[
             const SizedBox(height: 10),
             Text(_saveError!, key: const Key('campus-save-error'), style: const TextStyle(color: AppColors.error)),
