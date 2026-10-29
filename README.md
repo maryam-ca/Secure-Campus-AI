@@ -12,13 +12,31 @@ not included here. In the app, Phase 2 items appear only as locked "Under
 development" menu entries and greyed cards, with no data and no code behind
 them.
 
-**Read `docs/LIMITATIONS.md` and `docs/AUDIT_REPORT.md` first.** They
-state plainly what has been built, tested, and fixed in this
-development environment vs. what requires your own Firebase project, a
-physical iPhone 13, and a real Android/iOS device to actually run and
-demo — this project follows a strict no-fake-data policy (no mock AI,
-no fake GPS, no hardcoded stats), which means some things genuinely
-cannot be proven working until you attach that hardware.
+**Live demo (web version):** https://securecampus-seven.vercel.app
+
+**Read `docs/LIMITATIONS.md` first.** It states plainly what has been built and
+tested vs. what still needs a real device or a real trip to prove. This
+project follows a strict no-fake-data policy (no mock AI, no fake GPS, no
+hardcoded stats).
+
+## What Phase 1 contains
+
+| Portal | What it does |
+|---|---|
+| Admin | Creates and manages students, courses, books and staff accounts. Builds the bus route on a map: chooses each stop and the campus by tapping the map (or using the phone's location), edits, reorders or deletes stops, sees the route drawn along the real roads. Watches the bus live and assigns students to stops. |
+| Student | Own courses, library loans, found-card report, bus assignment and alerts. Never sees the live bus map. |
+| Librarian | Issues and returns books by QR; books and students can also be found by typing part of the title, code or name. |
+| Security | Reads the found-card reports (read only). |
+| Driver | Starts and ends a trip; the phone sends its GPS every 10 s (foreground service, so it continues with the screen off). The server ends the trip if the phone goes offline. |
+
+Server-side jobs: `bus_eta` sends one alert per student per trip about
+10 minutes before their own stop (also at once if the trip starts when the stop
+is already inside 10 minutes); `overdue_checker` sends overdue and due-soon
+notices.
+
+**Not built yet:** the afternoon trip *from* the campus (the campus is shown as
+its first stop, but there is no separate trip or alert logic for that
+direction), and everything in Phase 2.
 
 ## Setup after cloning (secrets are not in git)
 
@@ -40,10 +58,10 @@ summary:
 
 | Component | Target | How this was verified |
 |---|---|---|
-| Flutter | 3.47.x (stable channel) | Web search against docs.flutter.dev release notes (no Flutter SDK available in this build env to run `flutter --version` directly) |
-| Dart | 3.13.x (ships with Flutter 3.47) | Same |
+| Flutter | 3.47.x (stable channel) | Built and tested with Flutter 3.47.7 |
+| Dart | 3.13.x (ships with Flutter 3.47) | Dart 3.13.5 |
 | Firebase Flutter plugins | Floors from BoM 4.11.0 (2026-03-23), `^` constraints so `flutter pub get` resolves newer | firebase.google.com/support/release-notes/flutter (official, dated) |
-| Android | AGP ~9.2, Gradle ~9.5, Kotlin ~2.2, compileSdk 36, JDK 17 | Web search against developer.android.com — **not applied to a generated project**, since none exists here; verify against what `flutter create` actually produces |
+| Android | Native project is in `mobile/android` (generated and built) | Run `flutter doctor` for the toolchain the project needs |
 | Python (iris_ai / bus_eta / overdue_checker) | 3.12+ | **Actually installed and tested** — this repo's Python code was verified end-to-end on Python 3.12.3 |
 | FastAPI / OpenCV / NumPy / firebase-admin / etc. | Latest PyPI as of Sept 2026 | **Actually queried live from PyPI and installed** — not guessed (see `docs/VERSION_AUDIT.md`) |
 
@@ -53,12 +71,14 @@ than the floors above, upgrade before proceeding.
 
 ## 2. Project overview
 
-Admin creates students, courses, books, the bus stops and the campus
-location; students see only their own data (courses, library, bus
-assignment, alerts — never the live bus map); Security sees the found-card
-reports (read only); Librarian issues/returns books via QR; the one Driver
-shares live GPS while a trip is active; overdue-book notifications and the
-bus 10-minute alert run as real server-side jobs, not client-side checks.
+Admin creates students, courses, books and staff accounts, and builds the bus
+route: the stops and the campus are chosen on a map (the campus is the last
+stop of the morning route). Students see only their own data (courses,
+library, bus assignment, alerts — never the live bus map); Security sees the
+found-card reports (read only); the Librarian issues/returns books via QR; the
+one Driver shares live GPS while a trip is active. Overdue-book notifications
+and the bus 10-minute alert run as real server-side jobs, not client-side
+checks.
 
 ## 3. Architecture
 
@@ -128,20 +148,19 @@ The RTSP camera setup and iris enrollment are Phase 2 and are on the
 
 ### 4.6 Flutter app
 
+The native folders are already in the repo (`mobile/android`, `mobile/web`), so
+there is no `flutter create` step.
+
 ```
 cd mobile
-flutter create --platforms=android,ios .   # generates native folders - see docs/MOBILE_PLATFORM_SETUP.md
-# then add the camera/location/notification/Maps permissions listed there
 flutter pub get
-flutter pub outdated                        # see what's newer than this repo's floors - update freely
-flutterfire configure                       # generates lib/firebase_options.dart against your project
-flutter analyze                             # first real compile-check of this codebase - fix anything it flags
-flutter test                                # if you add widget/unit tests
-flutter build apk --debug                   # first real build
-flutter run                                 # on a real device/emulator
+flutterfire configure     # only if lib/firebase_options.dart is missing for your project
+flutter analyze
+flutter test              # 211 tests
+flutter run               # on a connected phone or emulator
 ```
 
-Pass your `iris_ai` service's address at run/build time (defaults to
+Pass your account service's address at run/build time (defaults to
 `localhost`, which only works for an emulator on the same machine):
 
 ```
@@ -149,9 +168,9 @@ flutter run --dart-define=BACKEND_BASE_URL=http://192.168.1.50:8000
 ```
 
 The Admin portal is the natural starting point once the app runs: add
-courses (with a weekly schedule), set the campus location, add bus stops,
-and create Security/Librarian/Driver accounts (each returns a one-time
-temporary password to relay to them).
+courses (with a weekly schedule), then **Transport → Stops**: add the stops and
+the campus by choosing them on the map, and create the Security, Librarian and
+Driver accounts (each returns a one-time temporary password to relay to them).
 
 ## 5. Normal run (after first-time setup above)
 
@@ -166,19 +185,33 @@ temporary password to relay to them).
 # user folder and builds that one instead.
 ```
 
-## 6. Testing what's been verified in this build environment
+### 5.1 Updating the live web version
+
+Vercel cannot build Flutter, so the web version is built here and uploaded:
 
 ```
-cd iris_ai   && PYTHONPATH=. pytest tests/ -v   # 7 tests: account endpoints and password rules
-cd ../bus_eta && PYTHONPATH=. pytest tests/ -v  # 38 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
-cd .. && python scripts/generate_qr_codes.py    # regenerates + re-verifies all 5 QR codes
+vercel whoami          # must show maryamfatima454
+.\deploy_web.bat        # builds from the current code and deploys to Vercel
 ```
 
-Everything else (Firebase-dependent calls against a live project, RTSP
-against the real phone, Flutter build/run, GPS, the Cloud Function
-actually firing on schedule) needs to be run and tested by you against
-your own project/hardware — see `docs/AUDIT_REPORT.md` "Device/Project-
-Dependent Items" for the exact list.
+Then press Ctrl+F5 on the site (the browser caches the old app). Details:
+`docs/DEPLOY_WEB.md`.
+
+## 6. Testing
+
+```
+cd mobile       && flutter test                          # 211 tests: screens, route/stop logic, road route, driver, library
+cd iris_ai      && PYTHONPATH=. pytest tests/ -v         # 7 tests: account endpoints and password rules
+cd bus_eta      && PYTHONPATH=. pytest tests/ -v         # 39 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
+cd overdue_checker && PYTHONPATH=. pytest tests/ -v      # 10 tests: overdue and due-soon rules
+firebase emulators:exec --only firestore --project demo-securecampus "npm --prefix rules-tests test"   # 25 security-rule tests (run from firebase/)
+python scripts/check_live_rules.py                       # read-only probe of the live project's rules
+python scripts/generate_qr_codes.py                      # regenerates + re-verifies all 5 QR codes
+```
+
+Not covered by automatic tests: the driver's phone behaviour on a real device
+(foreground service, losing the connection) and a real bus trip. These need
+the phone and the road — see `docs/LIMITATIONS.md`.
 
 ### 6.1 Demonstrating the 10-minute bus alert (assessment)
 
@@ -200,7 +233,7 @@ the same screen sends the real GPS. Say this plainly to the assessors.
 **Before you start**
 - Firestore rules published from `firebase/firestore.rules` (the campus,
   stops and Security pages need them).
-- The campus and the stops are saved (Admin, Transport), and at least one
+- The campus and the stops are saved (Admin, Transport, Stops), and at least one
   student is assigned to each stop you will test (Admin, Transport, Buses).
 - A driver account assigned to `BUS-001`, and a student login for a student
   at the stop you will test.
@@ -262,9 +295,8 @@ a real bus trip.
 
 See `.env.example` — every configurable value (Firebase project, RTDB
 URL, bus ETA polling/threshold/speed, map API key) with comments. Never
-commit a filled-in `.env`. Note: the Admin live bus map needs a
-*separate* native Google Maps API key (not in `.env` — see
-`docs/MOBILE_PLATFORM_SETUP.md` §4).
+commit a filled-in `.env`. The maps in the app (live bus map, route map, map
+picker) use OpenStreetMap tiles and OSRM road routing, so they need no map key.
 
 ## 8. Troubleshooting
 
@@ -282,8 +314,10 @@ commit a filled-in `.env`. Note: the Admin live bus map needs a
 - **`firebase deploy` fails with "no project active"** — run
   `firebase use --add` first (writes `.firebaserc` — see
   `.firebaserc.example` for the shape).
-- **Admin's live map shows a grey/blank tile area** — the native Google
-  Maps API key isn't configured yet; see `docs/MOBILE_PLATFORM_SETUP.md` §4.
+- **Route map shows straight lines** — the free OSRM road service could not be
+  reached (no internet or busy); the note under the map says so. Try again later.
+- **The live site shows the old app after a deploy** — press Ctrl+F5 (browser
+  cache), and check that `vercel whoami` said maryamfatima454 before deploying.
 
 ## 9. Security considerations
 
@@ -292,6 +326,9 @@ commit a filled-in `.env`. Note: the Admin live bus map needs a
   backend service touches them.
 - The live bus map is never exposed to students, enforced independently in
   the Flutter router and the Realtime Database rules.
+- The campus location (`config/transport`) can be read by any signed-in user
+  and written only by the Admin; checked in the rules tests and against the
+  live project.
 - Registration numbers are uniqueness-enforced via a race-safe Firestore
   transaction, not just client-side validation (fixed after audit).
 - `driverLocation` RTDB writes are field-whitelisted; unexpected keys
@@ -303,26 +340,22 @@ commit a filled-in `.env`. Note: the Admin live bus map needs a
 
 ## 10. Known limitations
 
-See `docs/LIMITATIONS.md` and `docs/AUDIT_REPORT.md` for the full,
-itemized list — most fundamentally: this environment has no Flutter
-SDK and no network path to `pub.dev`/`dl.google.com`/
-`storage.googleapis.com`, so **the Flutter/Dart code has never been
-compiled**. A static consistency sweep (every import resolves, every
-referenced class exists, every package is declared, brace/paren
-balance across all 50 files) was run instead and caught two real bugs
-before delivery (a Kotlin-style `.let()` call that isn't valid Dart,
-and a missing relative-import path) — but it cannot catch type errors
-or Flutter API misuse. Run `flutter analyze` yourself as the first
-real check.
+See `docs/LIMITATIONS.md` for the full, itemized list. The main ones:
+
+- The Driver GPS, the bus ETA job and the road-distance alert are tested with
+  unit tests and a simulated position, **not yet on a real bus trip**.
+- ETA = road distance / a fixed 25 km/h: no traffic, and it does not know which
+  stops were already passed. The public OSRM server is meant for light use.
+- Only the morning direction (towards the campus) is built; there is no
+  separate afternoon trip or alert from the campus.
+- The Firebase rules must be published to the live project whenever
+  `firebase/firestore.rules` changes.
+- The web demo needs the Python services running on a machine that is on for
+  account creation and live alerts.
 
 ## 11. Next steps
 
-1. `flutter analyze` / `flutter pub get` / `flutter build apk --debug`
-   — first real compile check; fix whatever it flags.
-2. Deploy Firebase rules + the Cloud Function, run the seed script,
-   generate `firebase_options.dart`.
-3. Configure the native Google Maps API key.
-4. Phase 2 (branch `phase-2`): iris enrollment, camera, attendance and gate
+1. Try the Driver portal and the bus alert on a real bus trip and a real phone.
+2. Afternoon direction: a trip that starts at the campus, with its own alerts.
+3. Phase 2 (branch `phase-2`): iris enrollment, camera, attendance and gate
    entry, once the camera hardware is available.
-5. Test the Driver portal's GPS, the bus ETA job, and the overdue-book
-   Cloud Function against real data and a real schedule.
