@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — The campus is a stop on the Stops page (last in the morning, first in the afternoon)
+- **Change:** the campus location moved from the Buses page to **Admin > Transport > Stops**, where the campus now appears as part of the route: it is the last item in the route line (`Stop 1 → Stop 2 → ... → Campus`) and a row at the end of the stop list ("Last stop in the morning, first stop in the afternoon", with its coordinates). The pencil button on that row opens the same map-first Campus dialog (name + choose on the map, or type coordinates). If the campus is not set the row says "Campus (not set)" with a button to set it.
+- **Fixed place:** the campus row has no up/down arrows and no delete button; it is always the end of the morning route and the start of the afternoon route. The route map line already ends at the campus.
+- **Buses page:** the "Campus Location" card is gone from it (the Buses menu text no longer mentions the campus).
+- **Files:** mobile/lib/features/admin/{admin_stops_screen,admin_bus_screen,campus_dialog,admin_nav}.dart, mobile/test/{admin_stops_test,admin_bus_test}.dart
+- **Verified by:** `flutter test` **202/202** (campus tests moved to the Stops page; new: campus shown after the last stop, cannot be moved or deleted, not-set state, empty route still shows the campus); `flutter analyze` 0 errors.
+- **Not verified:** on a phone/real Firestore. The student-facing bus screens and `bus_eta` are unchanged: direction-aware behaviour (the campus as the afternoon start) comes with the trips/direction step.
+
 ### 2026-10-29 — Admin: edit a bus stop; test for the alert at trip start
 - **Edit a stop (was missing):** Admin > Transport > Stops, each stop has an **Edit** button (pencil). Change the name and/or choose a new location on the map; the stop keeps its ID and its place in the route. Students assigned to the stop have a copy of its name, so those copies are updated in the same save (otherwise they would keep seeing the old name).
 - **Alert when a trip starts close to a stop:** already how `bus_eta` works, now proven by a named test: on the very first reading of a new trip, every stop that is 10 minutes or less away sends its "head to your stop" alert immediately (exactly 10 counts); stops further away wait. Nothing changed in `bus_eta` itself.

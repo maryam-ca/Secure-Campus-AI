@@ -80,94 +80,10 @@ Future<_FakeRepo> _pump(
 }
 
 void main() {
-  testWidgets('shows a prompt when the campus is not set, and no seat count anywhere', (tester) async {
+  testWidgets('no seat count anywhere, and the campus is not set here (it lives on the Stops page)', (tester) async {
     await _pump(tester);
-    expect(find.text('Campus location not set'), findsOneWidget);
+    expect(find.byKey(const Key('campus-tile')), findsNothing);
     expect(find.textContaining('seat'), findsNothing);
     expect(find.textContaining('Seats'), findsNothing);
-  });
-
-  testWidgets('the campus dialog is map-first: a Choose location on map button, numbers hidden until asked', (tester) async {
-    await _pump(tester);
-    await tester.tap(find.text('Set'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Choose location on map'), findsOneWidget);
-    expect(find.text('No location chosen yet.'), findsOneWidget);
-    expect(find.byKey(const Key('campus-lat-field')), findsNothing);
-
-    // Saving without a location tells the Admin to use the map, not "a number from -90 to 90".
-    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    expect(find.text('Choose the campus location on the map.'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
-    await tester.pump();
-    expect(find.byKey(const Key('campus-lat-field')), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
-    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
-    await tester.pump();
-    expect(find.text('Location: 33.78099, 72.35105'), findsOneWidget);
-    expect(find.text('Change location on map'), findsOneWidget);
-  });
-
-  testWidgets('the campus dialog opens the map picker', (tester) async {
-    await _pump(tester);
-    await tester.tap(find.text('Set'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('campus-pick-on-map')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('picker-use')), findsOneWidget);
-    expect(find.text('Choose the campus location'), findsOneWidget);
-  });
-
-  testWidgets('the campus dialog names the field that is wrong', (tester) async {
-    await _pump(tester);
-    await tester.tap(find.text('Set'));
-    await tester.pumpAndSettle();
-
-    // coordinates fine, name empty: only the name is flagged
-    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
-    await tester.pump();
-    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
-    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    expect(find.text('Enter the campus name'), findsOneWidget);
-    expect(find.text('A number from -90 to 90'), findsNothing);
-    expect(find.text('A number from -180 to 180'), findsNothing);
-
-    // name given, longitude out of range: only the longitude is flagged
-    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
-    await tester.enterText(find.byKey(const Key('campus-lng-field')), '200');
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    expect(find.text('Enter the campus name'), findsNothing);
-    expect(find.text('A number from -180 to 180'), findsOneWidget);
-  });
-
-  testWidgets('a refused save says so instead of doing nothing', (tester) async {
-    final repo = await _pump(tester);
-    repo.failSaves = true;
-
-    await tester.tap(find.text('Set'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
-    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
-    await tester.pump();
-    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
-    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('campus-save-error')), findsOneWidget);
-    expect(find.textContaining('rules may not be published'), findsOneWidget);
-    expect(find.text('Campus location'), findsOneWidget); // dialog stays open
-  });
-
-  testWidgets('shows the campus once set', (tester) async {
-    await _pump(tester, campus: const CampusLocation(name: 'CUI Attock', lat: 33.77, lng: 72.36));
-    expect(find.text('CUI Attock'), findsOneWidget);
   });
 }

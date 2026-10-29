@@ -15,6 +15,14 @@ class _FakeRepo implements AdminRepository {
   final List<Map<String, int>> renumberCalls = [];
   final List<({String id, String name, double lat, double lng, int order})> added = [];
   final List<({String id, String name, double lat, double lng})> updated = [];
+  final List<({String name, double lat, double lng})> campusSaved = [];
+  bool failSaves = false;
+
+  @override
+  Future<void> setCampus(String name, double lat, double lng) async {
+    if (failSaves) throw Exception('[cloud_firestore/permission-denied] Missing or insufficient permissions.');
+    campusSaved.add((name: name, lat: lat, lng: lng));
+  }
 
   @override
   Future<void> updateBusStop(String stopId, String name, double lat, double lng) async =>
@@ -65,9 +73,9 @@ void main() {
     await _pump(tester, [_stop('A', 1), _stop('B', 2), _stop('C', 3)]);
 
     expect(find.byKey(const Key('route-summary')), findsOneWidget);
-    // 3 stops -> 2 arrows in the route line and 2 in the list
-    expect(find.byIcon(Icons.arrow_forward), findsNWidgets(2));
-    expect(find.byIcon(Icons.south), findsNWidgets(2));
+    // 3 stops + the campus -> 3 arrows in the route line and 3 in the list
+    expect(find.byIcon(Icons.arrow_forward), findsNWidgets(3));
+    expect(find.byIcon(Icons.south), findsNWidgets(3));
     expect(find.text('Stop A'), findsNWidgets(2)); // route line + list
   });
 
@@ -170,6 +178,115 @@ void main() {
       // Nothing chosen yet: the confirm button is disabled.
       expect(tester.widget<ElevatedButton>(find.byKey(const Key('picker-use'))).onPressed, isNull);
     });
+  });
+
+  group('the campus is a stop of the route (last in the morning, first in the afternoon)', () {
+    testWidgets('it is shown after the last stop, with what it means', (tester) async {
+      await _pump(tester, [_stop('A', 1), _stop('B', 2)],
+          campus: const CampusLocation(name: 'CUI Attock', lat: 33.77, lng: 72.36));
+      expect(find.byKey(const Key('route-campus-chip')), findsOneWidget);
+      expect(find.text('CUI Attock'), findsNWidgets(2)); // route line + the campus row
+      expect(find.textContaining('Last stop in the morning, first stop in the afternoon'), findsOneWidget);
+    });
+
+    testWidgets('it cannot be moved or deleted: no arrows or delete button on its row', (tester) async {
+      await _pump(tester, [_stop('A', 1)], campus: const CampusLocation(name: 'CUI Attock', lat: 33.77, lng: 72.36));
+      expect(find.byKey(const Key('stop-up-1')), findsNothing);
+      expect(find.byKey(const Key('stop-down-1')), findsNothing);
+      expect(find.byKey(const Key('stop-delete-1')), findsNothing);
+      expect(find.byKey(const Key('campus-edit')), findsOneWidget);
+    });
+
+    testWidgets('not set: the row says so and offers to set it', (tester) async {
+      await _pump(tester, [_stop('A', 1)]);
+      expect(find.text('Campus (not set)'), findsNWidgets(2)); // route line + the campus row
+      expect(find.byTooltip('Set the campus location'), findsOneWidget);
+    });
+
+    testWidgets('with no stops the campus row is still there to set', (tester) async {
+      await _pump(tester, const []);
+      expect(find.text('No stops configured yet.'), findsNWidgets(2));
+      expect(find.byKey(const Key('campus-tile')), findsOneWidget);
+    });
+
+  testWidgets('the campus dialog is map-first: a Choose location on map button, numbers hidden until asked', (tester) async {
+    await _pump(tester, const []);
+    await tester.tap(find.byKey(const Key('campus-edit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose location on map'), findsOneWidget);
+    expect(find.text('No location chosen yet.'), findsOneWidget);
+    expect(find.byKey(const Key('campus-lat-field')), findsNothing);
+
+    // Saving without a location tells the Admin to use the map, not "a number from -90 to 90".
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Choose the campus location on the map.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
+    expect(find.byKey(const Key('campus-lat-field')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.pump();
+    expect(find.text('Location: 33.78099, 72.35105'), findsOneWidget);
+    expect(find.text('Change location on map'), findsOneWidget);
+  });
+
+  testWidgets('the campus dialog opens the map picker', (tester) async {
+    await _pump(tester, const []);
+    await tester.tap(find.byKey(const Key('campus-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('campus-pick-on-map')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('picker-use')), findsOneWidget);
+    expect(find.text('Choose the campus location'), findsOneWidget);
+  });
+
+  testWidgets('the campus dialog names the field that is wrong', (tester) async {
+    await _pump(tester, const []);
+    await tester.tap(find.byKey(const Key('campus-edit')));
+    await tester.pumpAndSettle();
+
+    // coordinates fine, name empty: only the name is flagged
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter the campus name'), findsOneWidget);
+    expect(find.text('A number from -90 to 90'), findsNothing);
+    expect(find.text('A number from -180 to 180'), findsNothing);
+
+    // name given, longitude out of range: only the longitude is flagged
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '200');
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Enter the campus name'), findsNothing);
+    expect(find.text('A number from -180 to 180'), findsOneWidget);
+  });
+
+  testWidgets('a refused save says so instead of doing nothing', (tester) async {
+    final repo = await _pump(tester, const []);
+    repo.failSaves = true;
+
+    await tester.tap(find.byKey(const Key('campus-edit')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campus-name-field')), 'COMSATS Attock');
+    await tester.tap(find.byKey(const Key('campus-type-coordinates')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('campus-lat-field')), '33.78099');
+    await tester.enterText(find.byKey(const Key('campus-lng-field')), '72.35105');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('campus-save-error')), findsOneWidget);
+    expect(find.textContaining('rules may not be published'), findsOneWidget);
+    expect(find.text('Campus location'), findsOneWidget); // dialog stays open
+  });
   });
 
   group('editing a stop', () {

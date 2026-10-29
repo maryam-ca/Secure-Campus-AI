@@ -9,7 +9,9 @@ import '../../core/utils/save_error.dart';
 import '../../core/widgets/confirm_dialog.dart';
 import '../../core/widgets/section_card.dart';
 import '../../models/admin_models.dart';
+import '../../models/transport_models.dart';
 import '../../providers/admin_providers.dart';
+import 'campus_dialog.dart';
 import 'map_picker_screen.dart';
 
 /// Admin > Transport > Stops: the bus route, stop by stop, in the order the
@@ -54,6 +56,7 @@ class AdminStopsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stopsAsync = ref.watch(busStopsProvider);
+    final campus = ref.watch(campusLocationProvider).valueOrNull;
     ref.watch(busAssignmentsProvider); // kept loaded so Delete knows which stops have riders
 
     return ListView(
@@ -83,12 +86,18 @@ class AdminStopsScreen extends ConsumerWidget {
                           label: Text(stops[i].name),
                           visualDensity: VisualDensity.compact,
                         ),
-                        if (i < stops.length - 1)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(Icons.arrow_forward, size: 18, color: AppColors.primaryBlue),
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(Icons.arrow_forward, size: 18, color: AppColors.primaryBlue),
+                        ),
                       ],
+                      // The campus is the last stop of the morning route.
+                      Chip(
+                        key: const Key('route-campus-chip'),
+                        avatar: const Icon(Icons.school, size: 16, color: AppColors.error),
+                        label: Text(campus?.name ?? 'Campus (not set)'),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ],
                   ),
           ),
@@ -105,9 +114,11 @@ class AdminStopsScreen extends ConsumerWidget {
           child: stopsAsync.when(
             loading: () => const LinearProgressIndicator(),
             error: (_, __) => const Text('Could not load stops.'),
-            data: (stops) => stops.isEmpty
-                ? const Text('No stops configured yet.')
-                : Column(
+            data: (stops) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (stops.isEmpty) const Text('No stops configured yet.'),
+                Column(
                     children: [
                       for (var i = 0; i < stops.length; i++) ...[
                         ListTile(
@@ -150,17 +161,20 @@ class AdminStopsScreen extends ConsumerWidget {
                           ),
                         ),
                         // arrow showing the bus travels from this stop to the next
-                        if (i < stops.length - 1)
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Padding(
-                              padding: EdgeInsets.only(left: 0, bottom: 2),
-                              child: Icon(Icons.south, size: 20, color: AppColors.primaryBlue),
-                            ),
+                        // (the last stop leads on to the campus)
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 0, bottom: 2),
+                            child: Icon(Icons.south, size: 20, color: AppColors.primaryBlue),
                           ),
+                        ),
                       ],
                     ],
                   ),
+                _CampusStopTile(campus: campus),
+              ],
+            ),
           ),
         ),
       ],
@@ -398,6 +412,34 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
               : Text(widget.stop == null ? 'Add' : 'Save'),
         ),
       ],
+    );
+  }
+}
+
+/// The campus as a stop: always the last one of the morning route and the first
+/// one of the afternoon route. Its place is fixed (it cannot be moved or
+/// deleted); only its name and location are edited.
+class _CampusStopTile extends StatelessWidget {
+  final CampusLocation? campus;
+  const _CampusStopTile({required this.campus});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      key: const Key('campus-tile'),
+      contentPadding: EdgeInsets.zero,
+      leading: const CircleAvatar(radius: 12, backgroundColor: AppColors.error, child: Icon(Icons.school, size: 14, color: Colors.white)),
+      title: Text(campus == null ? 'Campus (not set)' : campus!.name),
+      subtitle: Text(campus == null
+          ? 'Set the campus location. It is the last stop in the morning and the first stop in the afternoon.'
+          : 'Last stop in the morning, first stop in the afternoon\n${campus!.lat.toStringAsFixed(5)}, ${campus!.lng.toStringAsFixed(5)}'),
+      isThreeLine: campus != null,
+      trailing: IconButton(
+        key: const Key('campus-edit'),
+        tooltip: campus == null ? 'Set the campus location' : 'Edit the campus',
+        icon: Icon(campus == null ? Icons.add_location_alt_outlined : Icons.edit_outlined, size: 20),
+        onPressed: () => showDialog(context: context, builder: (_) => CampusDialog(current: campus)),
+      ),
     );
   }
 }
