@@ -1,4 +1,7 @@
+import 'package:latlong2/latlong.dart';
+
 import '../../models/admin_models.dart';
+import '../../models/transport_models.dart';
 
 /// The route's stop order: pure functions, so the rules are tested without Firebase.
 
@@ -38,4 +41,39 @@ Map<String, int> renumberedAfterRemoving(List<BusStopModel> stops, String remove
     if (remaining[i].order != i + 1) changes[remaining[i].id] = i + 1;
   }
   return changes;
+}
+
+/// The next free stop ID: STOP-01, STOP-02, ... continuing after the highest
+/// number already used (so deleting a middle stop never reuses a live ID, and
+/// the Admin never has to invent IDs).
+String nextStopId(Iterable<String> existingIds) {
+  final taken = existingIds.toSet();
+  var highest = 0;
+  for (final id in taken) {
+    final m = RegExp(r'(\d+)$').firstMatch(id);
+    if (m != null) {
+      final n = int.parse(m.group(1)!);
+      if (n > highest) highest = n;
+    }
+  }
+  var n = highest + 1;
+  String format(int v) => 'STOP-${v.toString().padLeft(2, '0')}';
+  while (taken.contains(format(n))) {
+    n++;
+  }
+  return format(n);
+}
+
+/// Route position for a stop added now: the end of the route.
+int nextStopOrder(List<BusStopModel> stops) =>
+    stops.isEmpty ? 1 : stops.map((s) => s.order).reduce((a, b) => a > b ? a : b) + 1;
+
+/// The points of the morning route in travel order: every stop in route order,
+/// then the campus (if set). The first point is where the bus starts.
+List<LatLng> routePoints(List<BusStopModel> stops, CampusLocation? campus) {
+  final sorted = [...stops]..sort((a, b) => a.order.compareTo(b.order));
+  return [
+    for (final s in sorted) LatLng(s.lat, s.lng),
+    if (campus != null) LatLng(campus.lat, campus.lng),
+  ];
 }

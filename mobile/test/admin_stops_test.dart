@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:securecampus/features/admin/admin_stops_screen.dart';
+import 'package:securecampus/features/admin/map_picker_screen.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:securecampus/models/admin_models.dart';
+import 'package:securecampus/models/transport_models.dart';
 import 'package:securecampus/providers/admin_providers.dart';
 import 'package:securecampus/repositories/admin_repository.dart';
 
@@ -10,6 +13,11 @@ class _FakeRepo implements AdminRepository {
   final List<Map<String, int>> orderCalls = [];
   final List<String> deleted = [];
   final List<Map<String, int>> renumberCalls = [];
+  final List<({String id, String name, double lat, double lng, int order})> added = [];
+
+  @override
+  Future<void> upsertBusStop(String id, String name, double lat, double lng, int order) async =>
+      added.add((id: id, name: name, lat: lat, lng: lng, order: order));
 
   @override
   Future<void> applyStopOrder(Map<String, int> newOrders) async => orderCalls.add(newOrders);
@@ -26,7 +34,8 @@ class _FakeRepo implements AdminRepository {
 
 BusStopModel _stop(String id, int order) => BusStopModel(id: id, name: 'Stop $id', lat: 33, lng: 73, order: order);
 
-Future<_FakeRepo> _pump(WidgetTester tester, List<BusStopModel> stops, {List<AdminBusAssignmentModel> riders = const []}) async {
+Future<_FakeRepo> _pump(WidgetTester tester, List<BusStopModel> stops,
+    {List<AdminBusAssignmentModel> riders = const [], CampusLocation? campus}) async {
   tester.view.physicalSize = const Size(1080, 4000);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -37,6 +46,7 @@ Future<_FakeRepo> _pump(WidgetTester tester, List<BusStopModel> stops, {List<Adm
       adminRepositoryProvider.overrideWithValue(repo),
       busStopsProvider.overrideWith((ref) => Stream.value(stops)),
       busAssignmentsProvider.overrideWith((ref) => Stream.value(riders)),
+      campusLocationProvider.overrideWith((ref) => Stream.value(campus)),
     ],
     child: const MaterialApp(home: Scaffold(body: AdminStopsScreen())),
   ));
@@ -110,5 +120,96 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(repo.deleted, isEmpty);
+  });
+
+  group('route map and choosing places on the map', () {
+    testWidgets('with stops and a campus the route map is shown', (tester) async {
+      await _pump(tester, [_stop('A', 1), _stop('B', 2)],
+          campus: const CampusLocation(name: 'CUI Attock', lat: 33.77, lng: 72.36));
+      expect(find.byKey(const Key('route-map')), findsOneWidget);
+      expect(find.textContaining('Green = where the morning bus starts'), findsOneWidget);
+    });
+
+    testWidgets('with nothing set the map card says what to do', (tester) async {
+      await _pump(tester, const []);
+      expect(find.byKey(const Key('route-map')), findsNothing);
+      expect(find.textContaining('Add the first stop'), findsOneWidget);
+    });
+
+    testWidgets('a stop needs a name and a location chosen on the map', (tester) async {
+      final repo = await _pump(tester, const []);
+      await tester.tap(find.byKey(const Key('add-stop-on-map')));
+      await tester.pumpAndSettle();
+      expect(find.text('This will be stop 1, where the morning bus starts.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('stop-add')));
+      await tester.pump();
+      expect(find.text('Enter a name for the stop.'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('stop-name-field')), 'Main Chowk');
+      await tester.tap(find.byKey(const Key('stop-add')));
+      await tester.pump();
+      expect(find.text('Choose the stop location on the map.'), findsOneWidget);
+      expect(repo.added, isEmpty);
+    });
+
+    testWidgets('Choose location on map opens the picker, with Use disabled until a place is chosen', (tester) async {
+      await _pump(tester, [_stop('STOP-01', 1), _stop('STOP-02', 2)]);
+      await tester.tap(find.byKey(const Key('add-stop-on-map')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('stop-name-field')), 'Main Chowk');
+
+      await tester.tap(find.byKey(const Key('stop-pick-on-map')));
+      await tester.pumpAndSettle();
+      expect(find.byType(MapPickerScreen), findsOneWidget);
+      // Nothing chosen yet: the confirm button is disabled.
+      expect(tester.widget<ElevatedButton>(find.byKey(const Key('picker-use'))).onPressed, isNull);
+    });
+  });
+
+  group('MapPickerScreen', () {
+    Future<LatLng?> openPicker(WidgetTester tester, {LatLng? initial}) async {
+      tester.view.physicalSize = const Size(1080, 2220);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      LatLng? result;
+      var popped = false;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  result = await Navigator.of(context).push<LatLng>(
+                    MaterialPageRoute(builder: (_) => MapPickerScreen(title: 'Choose', initial: initial)),
+                  );
+                  popped = true;
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      if (initial != null) {
+        await tester.tap(find.byKey(const Key('picker-use')));
+        await tester.pumpAndSettle();
+        expect(popped, isTrue);
+      }
+      return result;
+    }
+
+    testWidgets('nothing chosen: prompts to tap the map and Use is disabled', (tester) async {
+      await openPicker(tester);
+      expect(find.text('Tap the map to place the pin (zoom in for accuracy).'), findsOneWidget);
+      expect(tester.widget<ElevatedButton>(find.byKey(const Key('picker-use'))).onPressed, isNull);
+    });
+
+    testWidgets('an existing location is shown, and Use returns it', (tester) async {
+      final r = await openPicker(tester, initial: const LatLng(33.77, 72.36));
+      expect(r, const LatLng(33.77, 72.36));
+    });
   });
 }

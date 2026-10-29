@@ -28,6 +28,18 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — Admin: set the bus route and starting point by tapping the map
+- **Problem:** stops and the campus had to be entered as typed latitude/longitude numbers, plus a hand-made stop ID and order number. Hard to do and easy to get wrong.
+- **Now:**
+  - **Admin > Transport > Stops** has a **Route map**: the campus and every stop as numbered pins joined by a line. Stop 1 (green) is where the morning bus starts; the line runs stop by stop to the campus.
+  - **Add stop**: type a name, tap **Choose location on map**, tap the place (or the "my location" button), press **Use this location**, then Add. The stop ID (`STOP-01`, `STOP-02`...) and the route position (end of the route) are filled in automatically; the arrows still move a stop earlier or later.
+  - **Campus location** has **Choose on map** too (latitude/longitude can still be typed).
+  - The map picker shows saved stops and the campus as grey pins for context.
+- **Starting point:** the route's start is stop 1; to start somewhere else, add a stop there and move it to the top with the arrows.
+- **Files:** mobile/lib/features/admin/{map_picker_screen,admin_stops_screen,admin_bus_screen}.dart, mobile/lib/core/utils/bus_route.dart (`nextStopId`, `nextStopOrder`, `routePoints`), mobile/test/{bus_route_test,admin_stops_test}.dart
+- **Verified by:** `flutter test` **194/194** (new: stop ID/order/route-point rules, route map shown/empty, name+location required, picker opens with Use disabled and returns the chosen place); `flutter analyze` 0 errors.
+- **Not verified:** tapping the map to place a pin and saving a stop end to end (map taps are not simulated in tests); the real OpenStreetMap tiles; "my location" on a phone or in Chrome. Please try it once in the app.
+
 ### 2026-10-18 — Academics > Courses: names only, with Add, Edit and Delete
 - **Type:** refactor
 - **Areas:** mobile, firebase, scripts

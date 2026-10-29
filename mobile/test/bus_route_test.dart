@@ -57,4 +57,45 @@ void main() {
       expect(TripDirectionX.fromId('sideways'), isNull);
     });
   });
+
+  group('nextStopId', () {
+    test('starts at STOP-01 and continues after the highest number', () {
+      expect(nextStopId(const []), 'STOP-01');
+      expect(nextStopId(['STOP-01', 'STOP-02']), 'STOP-03');
+    });
+
+    test('deleting a middle stop never reuses a live ID', () {
+      expect(nextStopId(['STOP-01', 'STOP-03']), 'STOP-04');
+    });
+
+    test('works with old hand-typed IDs and never collides', () {
+      expect(nextStopId(['A', 'B']), 'STOP-01');
+      expect(nextStopId(['BUS-7', 'STOP-08']), 'STOP-09');
+      expect(nextStopId(['STOP-1']), 'STOP-02');
+    });
+  });
+
+  test('nextStopOrder is the end of the route', () {
+    expect(nextStopOrder(const []), 1);
+    expect(nextStopOrder([_stop('A', 1), _stop('B', 2)]), 3);
+    expect(nextStopOrder([_stop('A', 5), _stop('B', 2)]), 6);
+  });
+
+  group('routePoints', () {
+    BusStopModel at(String id, int order, double lat) =>
+        BusStopModel(id: id, name: id, lat: lat, lng: 73.0, order: order);
+
+    test('stops in route order, then the campus; the first point is the start', () {
+      final pts = routePoints(
+        [at('C', 3, 3), at('A', 1, 1), at('B', 2, 2)],
+        const CampusLocation(name: 'Campus', lat: 9, lng: 72),
+      );
+      expect(pts.map((p) => p.latitude), [1, 2, 3, 9]);
+    });
+
+    test('without a campus it is just the stops; with nothing it is empty', () {
+      expect(routePoints([at('A', 1, 1)], null).length, 1);
+      expect(routePoints(const [], null), isEmpty);
+    });
+  });
 }

@@ -10,6 +10,7 @@ import '../../core/widgets/section_card.dart';
 import '../../models/student_model.dart';
 import '../../models/transport_models.dart';
 import '../../providers/admin_providers.dart';
+import 'map_picker_screen.dart';
 
 const _busId = 'BUS-001'; // spec §29 - exactly one bus
 
@@ -217,6 +218,28 @@ class _CampusDialogState extends ConsumerState<_CampusDialog> {
   String? _lngError;
   String? _saveError;
 
+  /// Choose the campus by tapping the map; fills the latitude/longitude boxes.
+  Future<void> _pickOnMap() async {
+    final curLat = double.tryParse(_lat.text.trim());
+    final curLng = double.tryParse(_lng.text.trim());
+    final picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          title: 'Choose the campus location',
+          initial: curLat != null && curLng != null ? LatLng(curLat, curLng) : null,
+        ),
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _lat.text = picked.latitude.toStringAsFixed(6);
+        _lng.text = picked.longitude.toStringAsFixed(6);
+        _latError = null;
+        _lngError = null;
+      });
+    }
+  }
+
   Future<void> _save() async {
     final lat = double.tryParse(_lat.text.trim());
     final lng = double.tryParse(_lng.text.trim());
@@ -253,6 +276,16 @@ class _CampusDialogState extends ConsumerState<_CampusDialog> {
             key: const Key('campus-name-field'),
             controller: _name,
             decoration: InputDecoration(labelText: 'Campus name', errorText: _nameError),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const Key('campus-pick-on-map'),
+              onPressed: _pickOnMap,
+              icon: const Icon(Icons.map_outlined),
+              label: const Text('Choose on map'),
+            ),
           ),
           const SizedBox(height: 10),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

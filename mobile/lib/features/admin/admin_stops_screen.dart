@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/bus_route.dart';
@@ -8,6 +10,7 @@ import '../../core/widgets/confirm_dialog.dart';
 import '../../core/widgets/section_card.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
+import 'map_picker_screen.dart';
 
 /// Admin > Transport > Stops: the bus route, stop by stop, in the order the
 /// bus visits them, with arrows showing the direction of travel.
@@ -56,6 +59,8 @@ class AdminStopsScreen extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const _RouteMapCard(),
+        const SizedBox(height: 16),
         SectionCard(
           title: 'Route',
           icon: Icons.route_outlined,
@@ -157,6 +162,100 @@ class AdminStopsScreen extends ConsumerWidget {
   }
 }
 
+/// Route map: the campus and every stop in order, joined by a line. The first
+/// stop is where the morning bus starts. "Add stop" opens a dialog where the
+/// place is chosen by tapping the map.
+class _RouteMapCard extends ConsumerWidget {
+  const _RouteMapCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stops = ref.watch(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
+    final campus = ref.watch(campusLocationProvider).valueOrNull;
+    final points = routePoints(stops, campus);
+    final sorted = [...stops]..sort((a, b) => a.order.compareTo(b.order));
+
+    return SectionCard(
+      title: 'Route map',
+      icon: Icons.map_outlined,
+      trailing: TextButton.icon(
+        key: const Key('add-stop-on-map'),
+        onPressed: () => showDialog(context: context, builder: (_) => const _AddStopDialog()),
+        icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+        label: const Text('Add stop'),
+      ),
+      child: points.isEmpty
+          ? const Text('Add the first stop, or set the campus location, to see the route here.')
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 240,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FlutterMap(
+                      key: const Key('route-map'),
+                      options: points.length > 1
+                          ? MapOptions(
+                              initialCameraFit: CameraFit.coordinates(
+                                coordinates: points,
+                                padding: const EdgeInsets.all(40),
+                                maxZoom: 16,
+                              ),
+                            )
+                          : MapOptions(initialCenter: points.first, initialZoom: 15),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.securecampus',
+                        ),
+                        if (points.length > 1)
+                          PolylineLayer(polylines: [Polyline(points: points, strokeWidth: 4, color: AppColors.primaryBlue)]),
+                        MarkerLayer(
+                          markers: [
+                            for (var i = 0; i < sorted.length; i++)
+                              Marker(
+                                point: LatLng(sorted[i].lat, sorted[i].lng),
+                                width: 30,
+                                height: 30,
+                                child: Tooltip(
+                                  message: sorted[i].name,
+                                  child: CircleAvatar(
+                                    backgroundColor: i == 0 ? AppColors.success : AppColors.primaryBlue,
+                                    child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                  ),
+                                ),
+                              ),
+                            if (campus != null)
+                              Marker(
+                                point: LatLng(campus.lat, campus.lng),
+                                width: 36,
+                                height: 36,
+                                child: Tooltip(
+                                  message: campus.name,
+                                  child: const Icon(Icons.school, color: AppColors.error, size: 32),
+                                ),
+                              ),
+                          ],
+                        ),
+                        RichAttributionWidget(attributions: [TextSourceAttribution('OpenStreetMap contributors')]),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  sorted.isEmpty
+                      ? 'Only the campus is set. Add stops to build the route.'
+                      : 'Green = where the morning bus starts (stop 1). The line runs stop by stop to the campus.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+    );
+  }
+}
+
 class _AddStopDialog extends ConsumerStatefulWidget {
   const _AddStopDialog();
 
@@ -165,19 +264,40 @@ class _AddStopDialog extends ConsumerStatefulWidget {
 }
 
 class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
-  final _id = TextEditingController();
   final _name = TextEditingController();
-  final _lat = TextEditingController();
-  final _lng = TextEditingController();
-  final _order = TextEditingController(text: '1');
+  LatLng? _location;
   bool _submitting = false;
   String? _error;
 
+  /// Lets the Admin choose the place by tapping the map (or "my location").
+  Future<void> _pickOnMap() async {
+    final stops = ref.read(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
+    final campus = ref.read(campusLocationProvider).valueOrNull;
+    final picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          title: 'Choose the stop location',
+          initial: _location,
+          around: stops.isNotEmpty
+              ? LatLng(stops.last.lat, stops.last.lng)
+              : (campus != null ? LatLng(campus.lat, campus.lng) : null),
+          others: [
+            for (final s in stops) LatLng(s.lat, s.lng),
+            if (campus != null) LatLng(campus.lat, campus.lng),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _location = picked);
+  }
+
   Future<void> _submit() async {
-    final lat = double.tryParse(_lat.text.trim());
-    final lng = double.tryParse(_lng.text.trim());
-    if (_id.text.trim().isEmpty || _name.text.trim().isEmpty || lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) {
-      setState(() => _error = 'Enter an ID, a name, and a valid latitude (-90 to 90) and longitude (-180 to 180).');
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'Enter a name for the stop.');
+      return;
+    }
+    if (_location == null) {
+      setState(() => _error = 'Choose the stop location on the map.');
       return;
     }
 
@@ -186,8 +306,13 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
       _error = null;
     });
     try {
+      final stops = ref.read(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
       await ref.read(adminRepositoryProvider).upsertBusStop(
-            _id.text.trim(), _name.text.trim(), lat, lng, int.tryParse(_order.text.trim()) ?? 1,
+            nextStopId(stops.map((s) => s.id)),
+            _name.text.trim(),
+            _location!.latitude,
+            _location!.longitude,
+            nextStopOrder(stops),
           );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -199,24 +324,42 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final stops = ref.watch(busStopsProvider).valueOrNull ?? const <BusStopModel>[];
     return AlertDialog(
       title: const Text('Add Bus Stop'),
       content: SizedBox(
         width: 380,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(controller: _id, decoration: const InputDecoration(labelText: 'Stop ID (e.g. STOP-04)')),
-            const SizedBox(height: 10),
-            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Stop name')),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: TextField(controller: _lat, decoration: const InputDecoration(labelText: 'Latitude'), keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
-              const SizedBox(width: 10),
-              Expanded(child: TextField(controller: _lng, decoration: const InputDecoration(labelText: 'Longitude'), keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true))),
-            ]),
-            const SizedBox(height: 10),
-            TextField(controller: _order, decoration: const InputDecoration(labelText: 'Route order (1, 2, 3...)'), keyboardType: TextInputType.number),
+            TextField(
+              key: const Key('stop-name-field'),
+              controller: _name,
+              decoration: const InputDecoration(labelText: 'Stop name (e.g. Main Chowk)'),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              key: const Key('stop-pick-on-map'),
+              onPressed: _pickOnMap,
+              icon: const Icon(Icons.map_outlined),
+              label: Text(_location == null ? 'Choose location on map' : 'Change location on map'),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _location == null
+                  ? 'No location chosen yet.'
+                  : 'Location: ${_location!.latitude.toStringAsFixed(5)}, ${_location!.longitude.toStringAsFixed(5)}',
+              key: const Key('stop-location-text'),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              stops.isEmpty
+                  ? 'This will be stop 1, where the morning bus starts.'
+                  : 'It is added at the end of the route (stop ${nextStopOrder(stops)}). Use the arrows to move it.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!, key: const Key('stop-save-error'), style: const TextStyle(color: AppColors.error)),
@@ -227,6 +370,7 @@ class _AddStopDialogState extends ConsumerState<_AddStopDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
         ElevatedButton(
+          key: const Key('stop-add'),
           onPressed: _submitting ? null : _submit,
           child: _submitting
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
