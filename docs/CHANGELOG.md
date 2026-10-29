@@ -28,6 +28,12 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-10-29 — Web site updates automatically from each push (GitHub Action) [setup needed]
+- **Problem:** Vercel cannot build Flutter and the repo turns its Git builds off, so a push never updated the live site; manual uploads kept shipping an old `main.dart.js` (verified by downloading the live file: same checksum across three redeploys, still containing the removed "Campus Location" card).
+- **Added:** `.github/workflows/deploy-web.yml`: on every push to `main` (or Run workflow) it builds the web app from that commit, uploads it to the live Vercel project with the CLI, and then compares the live `main.dart.js` checksum with the one it just built; the job fails if they differ. `docs/DEPLOY_WEB.md` has the one-time setup.
+- **Needs from the owner:** three GitHub secrets (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) created while signed in to Vercel as `maryamfatima454`. Until then the workflow fails at its first step with a message saying which secret is missing; the live site is unchanged.
+- **Verified:** the workflow file is valid YAML and its embedded `vercel.json` parses. **Not verified:** the workflow has never run (it needs the secrets; the Flutter 3.47.7 install on GitHub, the Vercel upload and the final checksum check are untested).
+
 ### 2026-10-29 — The campus is a stop on the Stops page (last in the morning, first in the afternoon)
 - **Change:** the campus location moved from the Buses page to **Admin > Transport > Stops**, where the campus now appears as part of the route: it is the last item in the route line (`Stop 1 → Stop 2 → ... → Campus`) and a row at the end of the stop list ("Last stop in the morning, first stop in the afternoon", with its coordinates). The pencil button on that row opens the same map-first Campus dialog (name + choose on the map, or type coordinates). If the campus is not set the row says "Campus (not set)" with a button to set it.
 - **Fixed place:** the campus row has no up/down arrows and no delete button; it is always the end of the morning route and the start of the afternoon route. The route map line already ends at the campus.
