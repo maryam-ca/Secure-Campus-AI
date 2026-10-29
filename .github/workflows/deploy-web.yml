@@ -9,9 +9,10 @@ name: Deploy web app to Vercel
 # New repository secret, three secrets: VERCEL_TOKEN, VERCEL_ORG_ID,
 # VERCEL_PROJECT_ID. Steps are in docs/DEPLOY_WEB.md.
 
+# Off by default: it needs the three secrets below, so it only runs when started by
+# hand (Actions > Run workflow). To make every push deploy, add `push: branches: [main]`
+# here after creating the secrets. The normal route is .\deploy_web.bat (docs/DEPLOY_WEB.md).
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 concurrency:

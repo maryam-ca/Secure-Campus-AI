@@ -11,7 +11,9 @@ flutter build web --release
 vercel deploy --prod --yes --name securecampus
 ```
 
-## Automatic deploy on every push (GitHub Action)
+## Optional: automatic deploy (GitHub Action, off by default)
+
+The workflow only runs when started by hand. To make every push deploy, add `push:` / `branches: [main]` under `on:` in the workflow file after creating the secrets. Without a token, use `.\deploy_web.bat` (see below).
 
 `.github/workflows/deploy-web.yml` builds the Flutter web app from the pushed commit on GitHub, uploads it to the live Vercel project and then downloads the live `main.dart.js` to check it is byte-for-byte the build it just made (the job fails if not). So after `git push` the site updates in about 5-8 minutes, and the **Actions** tab shows green when it is live. You can also run it by hand: Actions > "Deploy web app to Vercel" > Run workflow.
 
