@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-23 — Fix: "All semesters" filter and the Done button after creating an account
+- **Type:** fix
+- **Areas:** mobile
+- **What changed:** (1) Students > Semester filter: "All semesters" did nothing, because a menu entry with a null value never reports a choice; it now uses 0 for "all". (2) The "Student account created" / "Account created" / "Password reset" boxes closed with the context of the form that had already gone, so Done did not work; each now closes itself. Same fix on the Security, Librarian and Driver account screens.
+- **Files:** mobile/lib/features/admin/admin_students_screen.dart, admin_accounts_screen.dart, mobile/test/admin_student_flow_test.dart
+- **Verified by:** 2 new tests that fail on the old code and pass on the new; all 224 Flutter tests pass; flutter analyze clean
+- **Notes:** the live website needs .\deploy_web.bat to get the fix.
+
 ### 2026-11-23 — Every book row in the Catalog shows its QR code
 - **Type:** feature
 - **Areas:** mobile

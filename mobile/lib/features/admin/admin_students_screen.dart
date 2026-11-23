@@ -109,16 +109,18 @@ class _AdminStudentsScreenState extends ConsumerState<AdminStudentsScreen> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            PopupMenuButton<int?>(
+                            // A menu entry whose value is null counts as "nothing chosen"
+                            // and never calls onSelected, so "All semesters" is 0.
+                            PopupMenuButton<int>(
                               tooltip: 'Filter by semester',
-                              onSelected: (v) => setState(() => _semester = v),
+                              onSelected: (v) => setState(() => _semester = v == 0 ? null : v),
                               itemBuilder: (_) => [
-                                const PopupMenuItem<int?>(
-                                  value: null,
+                                const PopupMenuItem<int>(
+                                  value: 0,
                                   child: Text('All semesters'),
                                 ),
                                 for (final sem in semesters)
-                                  PopupMenuItem<int?>(
+                                  PopupMenuItem<int>(
                                     value: sem,
                                     child: Text('Semester $sem'),
                                   ),
@@ -404,7 +406,7 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
   ) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Student account created'),
         content: SelectableText(
           'Email: ${result['email']}\nTemporary password: ${result['temporaryPassword']}\n\n'
@@ -414,7 +416,7 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Done'),
           ),
         ],
@@ -658,7 +660,7 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
         Navigator.of(context).pop();
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             title: const Text('Password reset'),
             content: SelectableText(
               'New password for ${widget.student.email}: $newPassword\n\n'
@@ -666,7 +668,7 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(dialogContext).pop(),
                 child: const Text('Done'),
               ),
             ],

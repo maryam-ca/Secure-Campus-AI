@@ -145,12 +145,12 @@ class _EditStaffDialogState extends ConsumerState<_EditStaffDialog> {
         Navigator.of(context).pop();
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             title: const Text('Password reset'),
             content: SelectableText(
               'New password for ${widget.account.email}: $newPassword\n\nShare this with them securely.',
             ),
-            actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
+            actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Done'))],
           ),
         );
       } else {
@@ -250,13 +250,13 @@ class _AddAccountDialogState extends ConsumerState<_AddAccountDialog> {
       Navigator.of(context).pop();
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('Account created'),
           content: SelectableText(
             'Email: ${result['email']}\nPassword: ${result['temporaryPassword']}\n\n'
             'Share this with them securely.',
           ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done'))],
+          actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Done'))],
         ),
       );
     } on BackendApiException catch (e) {
