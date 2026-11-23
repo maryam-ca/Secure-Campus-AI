@@ -69,7 +69,7 @@ void main() {
 
     expect(repo.saved, ['BOOK-006']);
     expect(find.byKey(const Key('book-qr')), findsOneWidget);
-    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.byKey(const Key('book-qr')), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const Key('book-qr-id'))).data, 'BOOK-006');
     expect(find.text('Operating Systems'), findsOneWidget);
   });
@@ -89,6 +89,17 @@ void main() {
     expect(find.byKey(const Key('book-qr')), findsNothing);
   });
 
+  testWidgets('every book in the catalog shows its own QR code in its row', (tester) async {
+    await _pump(tester);
+
+    expect(find.byKey(const ValueKey('row-qr-BOOK-005')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('row-qr-BOOK-005')), matching: find.byType(QrImageView)), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('row-qr-BOOK-005')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const Key('book-qr-id'))).data, 'BOOK-005');
+  });
+
   testWidgets('an existing book can show its QR code from the options menu', (tester) async {
     await _pump(tester);
 
@@ -97,7 +108,7 @@ void main() {
     await tester.tap(find.text('Show QR code'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.byKey(const Key('book-qr')), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const Key('book-qr-id'))).data, 'BOOK-005');
     expect(find.byKey(const Key('book-qr-id')), findsOneWidget);
   });

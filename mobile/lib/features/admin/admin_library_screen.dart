@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/utils/catalog_logic.dart';
 import '../../core/utils/student_search.dart';
@@ -148,6 +149,19 @@ class _AdminCatalogViewState extends ConsumerState<_AdminCatalogView> {
                     final isLocked = bookState(b) == BookState.locked;
                     return Card(
                       child: ListTile(
+                        // Every book shows its own QR code (the book ID); tap to enlarge.
+                        leading: Tooltip(
+                          message: 'Show QR code',
+                          child: InkWell(
+                            key: ValueKey('row-qr-${b.id}'),
+                            onTap: () => showBookQrDialog(context, id: b.id, title: b.title, author: b.author),
+                            child: Container(
+                              color: Colors.white,
+                              padding: const EdgeInsets.all(2),
+                              child: QrImageView(data: b.id, size: 52, padding: EdgeInsets.zero, backgroundColor: Colors.white),
+                            ),
+                          ),
+                        ),
                         title: Text(b.title),
                         subtitle: Text(
                           '${b.id} · ${b.author} · ${b.category}'

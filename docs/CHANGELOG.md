@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-23 — Every book row in the Catalog shows its QR code
+- **Type:** feature
+- **Areas:** mobile
+- **What changed:** each book in Admin > Library > Catalog now shows its own QR code (the book ID) at the left of its row, tap to enlarge for printing. A book added from Add Book therefore has its QR code in the list at once. New test for the row QR.
+- **Files:** mobile/lib/features/admin/admin_library_screen.dart, mobile/test/book_qr_test.dart
+- **Verified by:** flutter analyze clean; all 222 Flutter tests pass; not yet scanned with a real phone
+- **Notes:** the live website shows it only after the next .\deploy_web.bat.
+
 ### 2026-11-23 — New book gets its QR code automatically
 - **Type:** feature
 - **Areas:** mobile

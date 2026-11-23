@@ -156,7 +156,7 @@ cd mobile
 flutter pub get
 flutterfire configure     # only if lib/firebase_options.dart is missing for your project
 flutter analyze
-flutter test              # 221 tests
+flutter test              # 222 tests
 flutter run               # on a connected phone or emulator
 ```
 
@@ -200,7 +200,7 @@ Then press Ctrl+F5 on the site (the browser caches the old app). Details:
 ## 6. Testing
 
 ```
-cd mobile       && flutter test                          # 221 tests: screens, route/stop logic, road route, driver, library
+cd mobile       && flutter test                          # 222 tests: screens, route/stop logic, road route, driver, library
 cd iris_ai      && PYTHONPATH=. pytest tests/ -v         # 7 tests: account endpoints and password rules
 cd bus_eta      && PYTHONPATH=. pytest tests/ -v         # 39 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
 cd overdue_checker && PYTHONPATH=. pytest tests/ -v      # 10 tests: overdue and due-soon rules
