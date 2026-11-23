@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/catalog_logic.dart';
+import '../../core/utils/student_search.dart';
 import '../../models/admin_models.dart';
 import '../../providers/admin_providers.dart';
 import '../librarian/librarian_reports_screen.dart';
 import '../library/book_lock_ui.dart';
+import 'book_qr_dialog.dart';
 
 enum _AvailabilityFilter { all, available, issued, locked }
 
@@ -70,7 +72,7 @@ class _AdminCatalogViewState extends ConsumerState<_AdminCatalogView> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showDialog(
           context: context,
-          builder: (_) => const _AddBookDialog(),
+          builder: (_) => _AddBookDialog(existingIds: (booksAsync.valueOrNull ?? const []).map((b) => b.id).toList()),
         ),
         icon: const Icon(Icons.add),
         label: const Text('Add Book'),
@@ -165,8 +167,14 @@ class _AdminCatalogViewState extends ConsumerState<_AdminCatalogView> {
                                   showUnlockBookDialog(context, ref, b);
                                 if (v == 'history')
                                   showLockHistorySheet(context, b);
+                                if (v == 'qr')
+                                  showBookQrDialog(context, id: b.id, title: b.title, author: b.author);
                               },
                               itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'qr',
+                                  child: Text('Show QR code'),
+                                ),
                                 if (!isLocked)
                                   const PopupMenuItem(
                                     value: 'lock',
@@ -205,32 +213,44 @@ class _AdminCatalogViewState extends ConsumerState<_AdminCatalogView> {
 }
 
 class _AddBookDialog extends ConsumerStatefulWidget {
-  const _AddBookDialog();
+  final List<String> existingIds;
+  const _AddBookDialog({this.existingIds = const []});
 
   @override
   ConsumerState<_AddBookDialog> createState() => _AddBookDialogState();
 }
 
 class _AddBookDialogState extends ConsumerState<_AddBookDialog> {
-  final _id = TextEditingController();
+  late final _id = TextEditingController(text: nextBookId(widget.existingIds));
   final _title = TextEditingController();
   final _author = TextEditingController();
   final _category = TextEditingController();
   bool _submitting = false;
+  String? _error;
 
   Future<void> _submit() async {
     if (_id.text.trim().isEmpty || _title.text.trim().isEmpty) return;
-    setState(() => _submitting = true);
+    // Saving under an ID that exists would replace that book, so refuse it.
+    final taken = widget.existingIds.any((e) => normalizeRegNo(e) == normalizeRegNo(_id.text));
+    if (taken) {
+      setState(() => _error = '${_id.text.trim()} is already used by another book. Use a different ID.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final navigator = Navigator.of(context);
+    final pageContext = Navigator.of(context, rootNavigator: true).context;
     try {
-      await ref
-          .read(adminRepositoryProvider)
-          .upsertBook(
-            _id.text.trim(),
-            _title.text.trim(),
-            _author.text.trim(),
-            _category.text.trim(),
-          );
-      if (mounted) Navigator.of(context).pop();
+      final id = _id.text.trim();
+      final title = _title.text.trim();
+      final author = _author.text.trim();
+      await ref.read(adminRepositoryProvider).upsertBook(id, title, author, _category.text.trim());
+      if (!mounted) return;
+      navigator.pop();
+      // The new book's QR code comes up straight away.
+      if (pageContext.mounted) await showBookQrDialog(pageContext, id: id, title: title, author: author);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -266,11 +286,15 @@ class _AddBookDialogState extends ConsumerState<_AddBookDialog> {
               controller: _category,
               decoration: const InputDecoration(labelText: 'Category'),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, key: const Key('book-id-error'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Generate its QR code with scripts/generate_qr_codes.py after adding a new book ID here.',
+                'The ID is filled in for you. Its QR code is made automatically when you press Add.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(fontSize: 12),

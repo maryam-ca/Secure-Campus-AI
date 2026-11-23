@@ -128,3 +128,16 @@ BookModel? bookForCode(List<BookModel> all, String code) {
   final hits = all.where((b) => normalizeRegNo(b.id) == n).toList();
   return hits.length == 1 ? hits.first : null;
 }
+
+/// The next free book ID in the `BOOK-NNN` format: one more than the highest
+/// number already used (BOOK-005 -> BOOK-006). IDs in other formats are
+/// ignored. Starts at BOOK-001 when there is none.
+String nextBookId(Iterable<String> existingIds) {
+  var highest = 0;
+  for (final id in existingIds) {
+    final m = RegExp(r'^BOOK-(\d+)$', caseSensitive: false).firstMatch(id.trim());
+    final n = m == null ? 0 : int.parse(m.group(1)!);
+    if (n > highest) highest = n;
+  }
+  return 'BOOK-${(highest + 1).toString().padLeft(3, '0')}';
+}

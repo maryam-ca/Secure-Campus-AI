@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-23 — New book gets its QR code automatically
+- **Type:** feature
+- **Areas:** mobile
+- **What changed:** Admin > Library > Add Book now fills in the next free book ID (BOOK-006 after BOOK-005), refuses an ID that is already used (it used to silently replace that book), and on Add shows the new book's QR code straight away. Every book also has "Show QR code" in its options menu. The QR holds exactly the book ID, which the Librarian's scanner already reads. No script run is needed any more.
+- **Files:** mobile/lib/features/admin/book_qr_dialog.dart, admin_library_screen.dart, mobile/lib/core/utils/catalog_logic.dart (nextBookId), mobile/pubspec.yaml (qr_flutter), mobile/test/book_qr_test.dart
+- **Verified by:** flutter analyze clean; 6 new tests, all 221 Flutter tests pass; not yet scanned with a real phone camera
+- **Notes:** scripts/generate_qr_codes.py still makes the printable sheet for the first 5 books only; new books are printed from the app (Ctrl+P or screenshot).
+
 ### 2026-11-23 — Account-service error now says the real reason
 - **Type:** fix
 - **Areas:** mobile
