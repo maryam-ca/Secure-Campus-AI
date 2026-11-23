@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-23 — Account-service error now says the real reason
+- **Type:** fix
+- **Areas:** mobile
+- **What changed:** when the Admin app cannot create or change an account, it now asks the service's /health page why: not started (start it with run.bat), another program answering on the same address, or the service is fine and the request should be retried. Before it always said only "Cannot reach the account service". Found when an unrelated server on port 8000 answered instead of the SecureCampus service.
+- **Files:** mobile/lib/services/backend_api_service.dart, mobile/test/backend_api_service_test.dart
+- **Verified by:** flutter analyze clean; 4 new tests, all 215 Flutter tests pass; live service checked with /health and a CORS preflight
+- **Notes:** the BackendApiService constructor takes an optional http.Client (used by the tests).
+
 ### 2026-10-29 — README brought up to date with the built system
 - **Type:** docs
 - **Areas:** docs

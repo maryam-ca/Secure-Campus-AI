@@ -19,8 +19,30 @@ class BackendApiException implements Exception {
 /// (and should not) trust itself to gate access.
 class BackendApiService {
   final String baseUrl;
+  final http.Client _client;
 
-  BackendApiService({this.baseUrl = AppConfig.backendBaseUrl});
+  BackendApiService({this.baseUrl = AppConfig.backendBaseUrl, http.Client? client}) : _client = client ?? http.Client();
+
+  /// Says why the service could not be used, by asking its /health page:
+  /// nothing answers (not started), or something else answers at this address
+  /// (another program on the same port), or it is ours but the request failed.
+  Future<String> unreachableReason() async {
+    try {
+      final r = await _client.get(Uri.parse('$baseUrl/health')).timeout(const Duration(seconds: 5));
+      Object? body;
+      try {
+        body = jsonDecode(r.body);
+      } catch (_) {}
+      if (r.statusCode == 200 && body is Map && body['service'] == 'iris_ai') {
+        return 'The account service is running at $baseUrl but this request did not finish. Please try again.';
+      }
+      return 'Another program is answering at $baseUrl, not the SecureCampus account service. '
+          'Stop that program (or free the port), then start the service with run.bat.';
+    } catch (_) {
+      return 'Cannot reach the account service at $baseUrl. Start it with run.bat in the project folder; '
+          'it must be running and reachable from this device.';
+    }
+  }
 
   Future<String> _idToken() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -36,7 +58,7 @@ class BackendApiService {
   Future<http.Response> _post(String path, Map<String, dynamic> body) async {
     final token = await _idToken();
     try {
-      return await http
+      return await _client
           .post(
             Uri.parse('$baseUrl$path'),
             headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
@@ -44,9 +66,7 @@ class BackendApiService {
           )
           .timeout(const Duration(seconds: 15));
     } catch (_) {
-      throw BackendApiException(
-        'Cannot reach the account service at $baseUrl. It must be running and reachable from this device.',
-      );
+      throw BackendApiException(await unreachableReason());
     }
   }
 
