@@ -28,6 +28,13 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-23 — Account calls about 30x faster on Windows (127.0.0.1 instead of localhost)
+- **Type:** fix
+- **Areas:** mobile
+- **What changed:** the app's default account-service address is now http://127.0.0.1:8000. "localhost" made Windows try IPv6 first and fall back, so each call took about 0.22 s against 0.007 s (measured with curl on the Admin's PC; a Python client saw 2.3 s).
+- **Files:** mobile/lib/config/app_config.dart, README.md
+- **Verified by:** timings measured before the change; all Flutter tests pass; not yet timed in the app after the change
+
 ### 2026-11-23 — Fix: "All semesters" filter and the Done button after creating an account
 - **Type:** fix
 - **Areas:** mobile

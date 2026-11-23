@@ -127,7 +127,7 @@ firebase deploy --only firestore:rules,firestore:indexes,database
 
 Or via Docker: `docker compose up --build` (starts all three services).
 
-Verify `iris_ai` is up: `curl http://localhost:8000/health`.
+Verify `iris_ai` is up: `curl http://127.0.0.1:8000/health`.
 
 ### 4.3 Seed the initial dataset
 
@@ -161,7 +161,7 @@ flutter run               # on a connected phone or emulator
 ```
 
 Pass your account service's address at run/build time (defaults to
-`localhost`, which only works for an emulator on the same machine):
+`127.0.0.1`, which only works on the same machine):
 
 ```
 flutter run --dart-define=BACKEND_BASE_URL=http://192.168.1.50:8000
