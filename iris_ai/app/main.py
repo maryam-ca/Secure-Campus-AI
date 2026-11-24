@@ -17,16 +17,25 @@ live on the `phase-2` branch.
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin_api import router as admin_router
+from app.config import settings
+from app.lan_address import publish_backend_address
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("securecampus.iris_ai")
 
-app = FastAPI(title="SecureCampus Backend Service", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    publish_backend_address(settings.API_PORT)
+    yield
+
+
+app = FastAPI(title="SecureCampus Backend Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.include_router(admin_router)
 

@@ -1,7 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_config.dart';
+import '../core/utils/backend_address.dart';
 import '../models/admin_models.dart';
 import '../models/course_model.dart';
 import '../models/student_model.dart';
@@ -10,7 +14,29 @@ import '../repositories/admin_repository.dart';
 import '../services/backend_api_service.dart';
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) => AdminRepository());
-final backendApiServiceProvider = Provider<BackendApiService>((ref) => BackendApiService());
+
+/// Where the account service says it is (it writes `config/backend` when it
+/// starts, see iris_ai/app/lan_address.py). Only a phone needs this.
+final discoveredBackendUrlProvider = StreamProvider<String?>((ref) {
+  return FirebaseFirestore.instance
+      .collection('config')
+      .doc('backend')
+      .snapshots()
+      .map((d) => d.data()?['url'] as String?);
+});
+
+final backendApiServiceProvider = Provider<BackendApiService>((ref) {
+  final needsLookup = !kIsWeb && !AppConfig.backendUrlIsCustom;
+  final discovered = needsLookup ? ref.watch(discoveredBackendUrlProvider).valueOrNull : null;
+  return BackendApiService(
+    baseUrl: chooseBackendUrl(
+      discovered: discovered,
+      isWeb: kIsWeb,
+      customDefine: AppConfig.backendUrlIsCustom,
+      fallback: AppConfig.backendBaseUrl,
+    ),
+  );
+});
 
 /// One-shot aggregate read (uses Firestore count() queries), refreshed
 /// via pull-to-refresh (ref.invalidate) rather than held open as a

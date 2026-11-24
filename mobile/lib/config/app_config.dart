@@ -12,8 +12,12 @@
 class AppConfig {
   AppConfig._();
 
-  static const String backendBaseUrl = String.fromEnvironment(
-    'BACKEND_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
-  );
+  static const String _fromDefine = String.fromEnvironment('BACKEND_BASE_URL');
+
+  /// Built-in address (this PC), or the one given with --dart-define.
+  static const String backendBaseUrl = _fromDefine == '' ? 'http://127.0.0.1:8000' : _fromDefine;
+
+  /// True when an address was given at build time; it then overrides the one
+  /// the service publishes (see core/utils/backend_address.dart).
+  static const bool backendUrlIsCustom = _fromDefine != '';
 }

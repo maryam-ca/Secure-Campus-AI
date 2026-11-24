@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-24 — One command to run; the phone finds the account service by itself
+- **Type:** fix / infra
+- **Areas:** mobile / iris_ai / scripts
+- **What changed:** (1) iris_ai now writes its network address to Firestore config/backend at start-up; the app on a phone reads it, so no "localhost" error on a phone and nothing to type or rebuild when the PC's address changes (web keeps 127.0.0.1; a --dart-define address still wins). (2) run_app.bat is the one command: it starts the account service if it is not running, warns if another program holds port 8000, picks the connected phone (else Chrome on port 59025) and runs from mobile/. (3) install_app.bat now builds a release app and installs it so it keeps working with the cable out; "debug" is optional. The unused demo-accounts step was removed from it.
+- **Files:** iris_ai/app/lan_address.py, iris_ai/app/main.py, mobile/lib/core/utils/backend_address.dart, mobile/lib/config/app_config.dart, mobile/lib/providers/admin_providers.dart, run_app.bat, install_app.bat, README.md; tests: iris_ai/tests/test_lan_address.py, mobile/test/backend_address_test.dart
+- **Verified by:** iris_ai 21 tests; Flutter tests; the running service published http://172.0.1.193:8000 to config/backend after its automatic reload
+- **Notes:** the PC and the service must still be on for add/edit/reset/delete accounts; hosting the service in the cloud would remove that (not done). Plain `flutter run` in the project root still builds the wrong project: that is Flutter's behaviour, use run_app.bat.
+
 ### 2026-11-24 — Program must match the registration number; Delete student
 - **Type:** feature
 - **Areas:** mobile / iris_ai

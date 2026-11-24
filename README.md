@@ -156,7 +156,7 @@ cd mobile
 flutter pub get
 flutterfire configure     # only if lib/firebase_options.dart is missing for your project
 flutter analyze
-flutter test              # 233 tests
+flutter test              # 237 tests
 flutter run               # on a connected phone or emulator
 ```
 
@@ -174,16 +174,31 @@ Driver accounts (each returns a one-time temporary password to relay to them).
 
 ## 5. Normal run (after first-time setup above)
 
+On Windows, from the project root (note the leading `.\`), **one command**:
+
 ```
-./run.sh                    # iris_ai + bus_eta
-# the app - from the project root (Windows; note the leading .\):
-.\run_app.bat                  # flutter run on the connected phone
-.\install_app.bat              # build + install + launch, no hot-reload session
-# or: cd mobile  and then  flutter run
-# Do NOT run plain `flutter run` in the project root: the Flutter app is in
-# mobile/, and from the root Flutter walks up to an unrelated project in your
-# user folder and builds that one instead.
+.\run_app.bat                  # starts the account service if needed, then runs the app
+                               # on the connected phone, or in Chrome if there is none
+.\run_app.bat -d chrome        # pick the device yourself
+.\install_app.bat              # put the app on the phone for good (works after the cable is out)
+.\install_app.bat debug        # same, as a debug build
 ```
+
+On Linux/macOS the services start with `./run.sh`.
+
+Do NOT type plain `flutter run` in the project root: the Flutter app is in
+`mobile/`, and from the root Flutter walks up to an unrelated project in your
+user folder and builds that one instead (the long list of `secrets.dart` and
+`animateTo` errors). Use `.\run_app.bat`, or `cd mobile` first.
+
+**How the phone finds the account service.** On a phone, `localhost` is the phone
+itself. So when `iris_ai` starts it writes its network address to Firebase
+(`config/backend`), and the Admin app reads it from there. Nothing is typed or
+rebuilt when the PC's address changes; restart the service. The phone and the PC
+must be on the same WiFi for the Admin's account actions (add, edit, reset,
+delete). Login, library and bus tracking go straight to Firebase and work on any
+internet connection. The PC and the service must be on for the account actions
+whatever the phone does; hosting the service in the cloud would remove that.
 
 ### 5.1 Updating the live web version
 
@@ -200,8 +215,8 @@ Then press Ctrl+F5 on the site (the browser caches the old app). Details:
 ## 6. Testing
 
 ```
-cd mobile       && flutter test                          # 233 tests: screens, route/stop logic, road route, driver, library
-cd iris_ai      && PYTHONPATH=. pytest tests/ -v         # 17 tests: account endpoints, password rules, program/registration check, student delete
+cd mobile       && flutter test                          # 237 tests: screens, route/stop logic, road route, driver, library
+cd iris_ai      && PYTHONPATH=. pytest tests/ -v         # 21 tests: account endpoints, password rules, program/registration check, student delete, published service address
 cd bus_eta      && PYTHONPATH=. pytest tests/ -v         # 39 tests: ETA math, the single 10-minute alert, one alert per student per trip, own-stop only
 cd overdue_checker && PYTHONPATH=. pytest tests/ -v      # 10 tests: overdue and due-soon rules
 firebase emulators:exec --only firestore --project demo-securecampus "npm --prefix rules-tests test"   # 25 security-rule tests (run from firebase/)

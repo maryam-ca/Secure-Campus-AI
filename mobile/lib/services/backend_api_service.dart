@@ -40,7 +40,7 @@ class BackendApiService {
           'Stop that program (or free the port), then start the service with run.bat.';
     } catch (_) {
       return 'Cannot reach the account service at $baseUrl. Start it with run.bat in the project folder; '
-          'it must be running and reachable from this device.';
+          'it must be running, and this device must be on the same WiFi as the PC.';
     }
   }
 
