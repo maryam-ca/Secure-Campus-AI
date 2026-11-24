@@ -122,6 +122,16 @@ class BackendApiService {
     }
   }
 
+  /// Permanently deletes a student (login, profile, bus assignment) and frees
+  /// the registration number. The service refuses while a book is still out.
+  Future<void> deleteStudent(String uid) async {
+    final resp = await _post('/admin/students/delete', {'uid': uid});
+
+    if (resp.statusCode != 200) {
+      throw BackendApiException(_extractDetail(resp) ?? 'Delete failed (${resp.statusCode}).');
+    }
+  }
+
   String? _extractDetail(http.Response resp) {
     try {
       final body = jsonDecode(resp.body);

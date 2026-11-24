@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/registration_rules.dart';
 import '../../core/utils/student_filter.dart';
 import '../../core/widgets/confirm_dialog.dart';
 import '../../models/student_model.dart';
@@ -367,6 +368,11 @@ class _AddStudentDialogState extends ConsumerState<_AddStudentDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final mismatch = registrationProgramProblem(_regNo.text, _program.text);
+    if (mismatch != null) {
+      setState(() => _error = mismatch);
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -474,6 +480,36 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
     }
   }
 
+  Future<void> _delete() async {
+    final student = widget.student;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Delete this student?',
+      message: '${student.name} (${student.registrationNumber}) will be removed for good: the login, the profile and '
+          'the bus stop. The registration number can be used again. This cannot be undone.\n\n'
+          'If you only want to stop them signing in, use Deactivate instead.',
+      confirmLabel: 'Delete',
+    );
+    if (!confirmed || !mounted) return;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await ref.read(backendApiServiceProvider).deleteStudent(student.uid);
+      navigator.pop();
+      messenger.showSnackBar(SnackBar(content: Text('${student.name} was deleted.')));
+    } on BackendApiException catch (e) {
+      if (mounted) setState(() => _message = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _message = 'Something went wrong: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.student;
@@ -573,6 +609,12 @@ class _StudentDetailSheetState extends ConsumerState<_StudentDetailSheet> {
                     style: TextStyle(color: AppColors.error),
                   ),
                 ),
+              OutlinedButton.icon(
+                key: const Key('student-delete'),
+                onPressed: _busy ? null : _delete,
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                label: const Text('Delete', style: TextStyle(color: AppColors.error)),
+              ),
               FilledButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -627,6 +669,11 @@ class _EditStudentDialogState extends ConsumerState<_EditStudentDialog> {
   }
 
   Future<void> _submit() async {
+    final mismatch = registrationProgramProblem(widget.student.registrationNumber, _program.text);
+    if (mismatch != null) {
+      setState(() => _error = mismatch);
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;

@@ -12,6 +12,7 @@ client = TestClient(app)
 
 PROTECTED = [
     ("post", "/admin/accounts/deactivate", {"json": {"uid": "u1"}}),
+    ("post", "/admin/students/delete", {"json": {"uid": "u1"}}),
 ]
 
 

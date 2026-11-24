@@ -35,12 +35,12 @@ void main() {
     const header = 'name,email,registration_number,program,semester,courses\n';
 
     test('a good row is valid and fully read', () {
-      final r = _parse('${header}Ayesha Khan,a@x.edu,FA24-BSE-011,BCS,3,SE;AI\n');
+      final r = _parse('${header}Ayesha Khan,a@x.edu,FA24-BSE-011,BSE,3,SE;AI\n');
       expect(r.fileErrors, isEmpty);
       final row = r.rows.single;
       expect(row.isValid, isTrue);
       expect([row.name, row.email, row.registrationNumber, row.program, row.semester, row.courses],
-          ['Ayesha Khan', 'a@x.edu', 'FA24-BSE-011', 'BCS', 3, ['SE', 'AI']]);
+          ['Ayesha Khan', 'a@x.edu', 'FA24-BSE-011', 'BSE', 3, ['SE', 'AI']]);
       expect(row.line, 2);
     });
 

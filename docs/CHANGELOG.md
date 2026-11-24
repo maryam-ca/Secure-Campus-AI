@@ -28,6 +28,14 @@ Related: [PROJECT_STATUS.md](PROJECT_STATUS.md) (baseline analysis) · [ISSUES.m
 
 <!-- NEW ENTRIES GO BELOW THIS LINE -->
 
+### 2026-11-24 — Program must match the registration number; Delete student
+- **Type:** feature
+- **Areas:** mobile / iris_ai
+- **What changed:** (1) A registration number carries the program (FA23-BSE-011 = BSE). Add Student, Edit Student, the CSV import and the account service now refuse a Program that differs from the one in the number (BSE with FA23-BSI-011), with a sentence naming both. Numbers in other formats are not checked. (2) New Delete button in the student's detail sheet, with a confirm question. It removes the login, profile, bus assignment and role copy, and frees the registration number. It is refused while the student still has a book not returned. Past loans, reports and notifications are kept as history. Deactivate is still there for "stop the login only".
+- **Files:** iris_ai/app/registration.py, firebase_client.py (delete_student), admin_api.py (POST /admin/students/delete), mobile/lib/core/utils/registration_rules.dart, student_csv.dart, services/backend_api_service.dart, features/admin/admin_students_screen.dart; tests: iris_ai/tests/test_registration_and_delete.py, mobile/test/registration_rules_test.dart, admin_student_flow_test.dart
+- **Verified by:** iris_ai 17 tests pass (10 new); all 233 Flutter tests pass; flutter analyze has no errors; delete not yet tried on the live Firebase project
+- **Notes:** one old CSV test used FA24-BSE-011 with program BCS (the very mismatch now refused), its data was corrected. The account service must be restarted (run.bat) to get the new delete endpoint.
+
 ### 2026-11-23 — Account calls about 30x faster on Windows (127.0.0.1 instead of localhost)
 - **Type:** fix
 - **Areas:** mobile

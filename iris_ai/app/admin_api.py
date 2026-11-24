@@ -109,3 +109,19 @@ def update_account(body: UpdateAccountRequest, authorization: str | None = Heade
     except Exception as exc:
         raise HTTPException(409, f"could not update account: {exc}") from exc
     return UpdateAccountResponse(**result)
+
+
+class DeleteStudentRequest(BaseModel):
+    uid: str
+
+
+@router.post("/students/delete")
+def delete_student(body: DeleteStudentRequest, authorization: str | None = Header(default=None)):
+    require_admin(authorization)
+    try:
+        result = firebase_client.delete_student(body.uid)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(500, f"could not delete student: {exc}") from exc
+    return {"deleted": True, **result}

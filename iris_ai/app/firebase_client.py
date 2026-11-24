@@ -21,6 +21,7 @@ from firebase_admin import auth as fb_auth
 from firebase_admin import credentials, db as rtdb, firestore
 
 from app.config import settings
+from app.registration import program_mismatch
 
 log = logging.getLogger("securecampus.iris_ai.firebase")
 
@@ -95,6 +96,9 @@ def create_account(email: str, name: str, role: str,
         reg_no = (fields.get("registrationNumber") or "").strip()
         if not reg_no:
             raise ValueError("registrationNumber is required for role='student'")
+        mismatch = program_mismatch(reg_no, str(fields.get("program", "")))
+        if mismatch:
+            raise ValueError(mismatch)
         _reserve_registration_number(reg_no)
 
     # Never default to something guessable (it used to be the registration number).
@@ -163,6 +167,39 @@ def deactivate_account(uid: str) -> None:
     db().collection("users").document(uid).update({"active": False})
     fb_auth.update_user(uid, disabled=True)
     fb_auth.revoke_refresh_tokens(uid)
+
+
+def delete_student(uid: str) -> dict[str, Any]:
+    """Permanently removes a student: the login, the profile, the registration
+    number reservation (so the number can be used again), the bus assignment and
+    the role mirror. Refused while the student still has a book that was not
+    returned. Past loan, report and notification records are kept as history."""
+    user = db().collection("users").document(uid).get()
+    if not user.exists or (user.to_dict() or {}).get("role") != "student":
+        raise ValueError("this account is not a student")
+
+    open_loans = list(
+        db().collection("libraryIssues").where("studentId", "==", uid).where("returned", "==", False).stream()
+    )
+    if open_loans:
+        raise ValueError(
+            f"this student still has {len(open_loans)} book(s) not returned. "
+            "Return them first, or use Deactivate instead."
+        )
+
+    student_doc = db().collection("students").document(uid).get()
+    reg_no = ((student_doc.to_dict() or {}).get("registrationNumber") or "").strip() if student_doc.exists else ""
+
+    fb_auth.delete_user(uid)  # first: if this fails nothing else is touched
+
+    db().collection("users").document(uid).delete()
+    db().collection("students").document(uid).delete()
+    db().collection("busAssignments").document(uid).delete()
+    if reg_no:
+        db().collection("registrationNumbers").document(reg_no).delete()
+    if settings.FIREBASE_DATABASE_URL:
+        rtdb.reference(f"roles/{uid}").delete()
+    return {"uid": uid, "registrationNumber": reg_no}
 
 
 def update_account(uid: str, role: str, name: str | None = None, password: str | None = None) -> dict[str, Any]:

@@ -9,6 +9,8 @@
 /// can see exactly what is wrong in which row *before* importing.
 library;
 
+import 'registration_rules.dart';
+
 class StudentCsvRow {
   /// 1-based line number in the file (the header is line 1).
   final int line;
@@ -198,6 +200,9 @@ StudentCsvResult parseStudentCsv(
     } else if (!seenRegs.add(reg.toLowerCase())) {
       errors.add('Registration number $reg appears twice in this file.');
     }
+
+    final programProblem = reg.isEmpty ? null : registrationProgramProblem(reg, program);
+    if (programProblem != null) errors.add(programProblem);
 
     var semester = 1;
     if (semText.isNotEmpty) {
